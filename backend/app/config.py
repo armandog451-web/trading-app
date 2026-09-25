@@ -1,11 +1,11 @@
 import os
-from pathlib import Path
+from pydantic import Field, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 class Settings(BaseSettings):
-    # App Settings
+    # App basic
     APP_NAME: str = "TradePulse Quantitative Intraday Engine"
     ENV: str = "development"
     DEBUG: bool = True
@@ -13,20 +13,19 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
 
     # Database
-    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'trade_engine.db'}"
+    DATABASE_URL: str = f"sqlite:///{os.path.join(BASE_DIR, 'trade_engine.db')}"
 
-    # Active Broker Selector: "ALPACA", "MOOMOO", "SIMULATOR"
+    # Broker selection
     ACTIVE_BROKER: str = "MOOMOO"
-    AUTO_EXECUTE_TRADES: bool = False  # False = Modo Solo Señales/Notificaciones (no ejecuta orden en broker)
+    AUTO_EXECUTE_TRADES: bool = False
 
-
-    # Alpaca Broker Credentials
+    # Alpaca credentials
     ALPACA_API_KEY: str = ""
     ALPACA_SECRET_KEY: str = ""
     ALPACA_PAPER: bool = True
     ALPACA_BASE_URL: str = "https://paper-api.alpaca.markets"
 
-    # Moomoo Open API Credentials
+    # Moomoo Open API credentials
     MOOMOO_HOST: str = "127.0.0.1"
     MOOMOO_PORT: int = 11111
     MOOMOO_TRADE_PWD: str = ""
@@ -34,17 +33,20 @@ class Settings(BaseSettings):
     MOOMOO_ACC_ID: int = 0
 
     # Macro & Data APIs
+    FRED_API_KEY: str = ""
 
-    FRED_API_KEY: str = ""  # Free key from St. Louis Fed
+    # Risk Management Defaults (percent values)
+    MAX_DAILY_LOSS_PCT: float = 2.0   # 2% daily drawdown
+    RISK_PER_TRADE_PCT: float = 1.0   # 1% per trade
+    MIN_RR_RATIO: float = 2.0
+    MAX_OPEN_POSITIONS: int = 3
+    AUTO_SQUARE_OFF_TIME: str = "15:50"
 
-    # Risk Management Defaults
-    MAX_DAILY_LOSS_PCT: float = 2.0       # Circuit Breaker: 2% max drawdown per day
-    RISK_PER_TRADE_PCT: float = 1.0       # 1% equity risked per trade
-    MIN_RR_RATIO: float = 2.0             # Minimum 1:2 Risk/Reward required
-    MAX_OPEN_POSITIONS: int = 3           # Max concurrent positions
-    AUTO_SQUARE_OFF_TIME: str = "15:50"   # EST time to close all intraday trades
+    # Trading parameters (demo friendly)
+    OPEN_MINUTES: int = 1
+    VOLUME_MULTIPLIER: float = 1.5
 
-    # Target Universe - High Performance Intraday / Scalping Assets
+    # Target universe
     CORE_SYMBOLS: list[str] = ["QQQ", "SPY", "TSLA", "AAPL", "MSFT"]
     MAX_SCREENED_STOCKS: int = 4
 
@@ -54,9 +56,8 @@ class Settings(BaseSettings):
     DISCORD_WEBHOOK_URL: str = ""
 
     # Network / SSL
-    SSL_VERIFY: bool = False  # False avoids SSL: CERTIFICATE_VERIFY_FAILED with Windows Antivirus/Proxy SSL inspection
+    SSL_VERIFY: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
 
 settings = Settings()

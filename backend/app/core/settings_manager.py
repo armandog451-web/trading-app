@@ -12,7 +12,7 @@ from app.engines.risk_engine import risk_engine
 
 logger = logging.getLogger(__name__)
 
-ENV_FILE_PATH = BASE_DIR / ".env"
+ENV_FILE_PATH = Path(BASE_DIR) / ".env"
 
 class SettingsManager:
     """

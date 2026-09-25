@@ -79,12 +79,11 @@ class AlpacaBroker:
             return {"success": False, "error": f"Error de conexión con Alpaca: {str(e)}"}
 
     async def get_account(self) -> dict:
-
         """Obtiene información de la cuenta, balance, equity y poder de compra."""
         if self.has_real_credentials:
             try:
                 async with self._get_client(timeout=5.0) as client:
-
+                    
                     resp = await client.get(f"{self.base_url}/v2/account", headers=self._get_headers())
                     if resp.status_code == 200:
                         data = resp.json()
@@ -220,6 +219,30 @@ class AlpacaBroker:
             "message": "Bracket order simulada exitosa"
         }
 
+    async def send_order(self, order: dict) -> str:
+        """Compatibility shim for ExecutionEngine.
+        Expects order dict with keys: symbol, price, size, side, stop_loss, take_profit.
+        Calls submit_bracket_order and returns order_id.
+        """
+        qty = order.get("size", 1)
+        side = order.get("side", "buy").upper()
+        symbol = order["symbol"]
+        entry_price = order["price"]
+        stop = order.get("stop_loss") or 0.0
+        take = order.get("take_profit") or 0.0
+        result = await self.submit_bracket_order(
+            symbol=symbol,
+            qty=qty,
+            side=side,
+            entry_price=entry_price,
+            stop_loss=stop,
+            take_profit=take,
+            order_type="market",
+        )
+        if result.get("success"):
+            return result["order_id"]
+        raise RuntimeError(result.get("error", "Alpaca order failed"))
+
     async def close_all_positions(self) -> dict:
         """
         BOTÓN DE PÁNICO:
@@ -237,7 +260,6 @@ class AlpacaBroker:
             except Exception as e:
                 logger.error(f"Error en cierre de pánico Alpaca: {e}")
                 return {"success": False, "error": str(e)}
-
 
         # Cierre en simulador
         closed_count = len(self._sim_positions)
