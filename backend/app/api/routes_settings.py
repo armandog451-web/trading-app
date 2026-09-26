@@ -181,13 +181,15 @@ async def sync_github():
 
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "never"}
+
     try:
         # git add .
         subprocess.run([git_cmd, "add", "."], cwd=repo_dir, capture_output=True, text=True, check=True)
         # git commit
         commit_res = subprocess.run([git_cmd, "commit", "-m", f"Auto-sync TradePulse: {now_str}"], cwd=repo_dir, capture_output=True, text=True)
         # git push
-        push_res = subprocess.run([git_cmd, "push", "origin", "main"], cwd=repo_dir, capture_output=True, text=True, timeout=15)
+        push_res = subprocess.run([git_cmd, "push", "origin", "main"], cwd=repo_dir, capture_output=True, text=True, timeout=10, env=env)
 
         if push_res.returncode == 0:
             return {
@@ -198,14 +200,14 @@ async def sync_github():
         else:
             return {
                 "success": False,
-                "message": "Aviso: Git requiere autorización. Haz doble clic en 'Sincronizar con GitHub' en el escritorio para iniciar sesión en GitHub.",
+                "message": "Aviso: Git requiere autorización en GitHub. Haz doble clic en 'Sincronizar con GitHub' en tu Escritorio para iniciar sesión una sola vez.",
                 "detail": push_res.stderr or push_res.stdout
             }
     except subprocess.TimeoutExpired:
         return {
             "success": False,
             "message": "Git Credential Manager está esperando autorización. Haz doble clic en 'Sincronizar con GitHub' en el escritorio para iniciar sesión.",
-            "detail": "Git push timed out (credential prompt pending)"
+            "detail": "Git push timed out"
         }
     except Exception as e:
         return {
