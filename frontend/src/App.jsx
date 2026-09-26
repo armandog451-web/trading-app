@@ -22,7 +22,8 @@ import {
   fetchSentimentFactors,
   fetchScreenerStocks,
   fetchTechnicalData,
-  fetchNotifications
+  fetchNotifications,
+  syncGitHub
 } from './services/api';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSyncingGit, setIsSyncingGit] = useState(false);
 
   const [status, setStatus] = useState(null);
   const [positions, setPositions] = useState([]);
@@ -156,6 +158,23 @@ export default function App() {
     }
   };
 
+  const handleSyncGitHub = async () => {
+    setIsSyncingGit(true);
+    showToast('Sincronizando cambios con GitHub...', 'info');
+    try {
+      const res = await syncGitHub();
+      if (res.success) {
+        showToast(res.message, 'success');
+      } else {
+        showToast(res.message || 'Aviso de sincronización', 'warn');
+      }
+    } catch (err) {
+      showToast('Error sincronizando con GitHub: ' + err.message, 'error');
+    } finally {
+      setIsSyncingGit(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0E14] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
       
@@ -184,6 +203,8 @@ export default function App() {
         onTriggerTestTrade={handleTestTrade}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onSyncGitHub={handleSyncGitHub}
+        isSyncing={isSyncingGit}
       />
 
       {/* Main Workspace */}

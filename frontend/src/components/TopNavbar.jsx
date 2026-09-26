@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Play, Pause, AlertOctagon, Settings as SettingsIcon, ShieldCheck, Zap, Bell, HelpCircle } from 'lucide-react';
+import { Activity, Play, Pause, AlertOctagon, Settings as SettingsIcon, ShieldCheck, Zap, Bell, HelpCircle, GitBranch } from 'lucide-react';
 
 export default function TopNavbar({
   status,
@@ -12,7 +12,9 @@ export default function TopNavbar({
   onOpenBacktest,
   onTriggerTestTrade,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  onSyncGitHub,
+  isSyncing = false
 }) {
   const isRunning = status?.is_running || false;
   const equity = status?.account_equity || 100000;
@@ -156,6 +158,17 @@ export default function TopNavbar({
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
+          </button>
+
+          {/* GitHub Sync Button */}
+          <button
+            onClick={onSyncGitHub}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white transition border border-slate-700 font-semibold text-xs cursor-pointer"
+            title="Sincronizar y Subir Cambios a GitHub (armandog451-web/trading-app)"
+          >
+            <GitBranch className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-pulse' : ''}`} />
+            <span className="hidden lg:inline">{isSyncing ? 'Sincronizando...' : 'GitHub'}</span>
           </button>
 
           {/* Settings Modal Button */}
