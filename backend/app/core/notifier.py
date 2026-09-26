@@ -35,6 +35,14 @@ class Notifier:
 
     async def send_alert(self, title: str, message: str, level: str = "INFO") -> bool:
         """Envía una alerta informativa genérica multicanal."""
+        # Suprimir notificaciones de cierre de bolsa si están desactivadas por el usuario
+        if not getattr(settings, "NOTIFY_MARKET_CLOSE", False):
+            title_lower = title.lower()
+            msg_lower = message.lower()
+            if any(term in title_lower or term in msg_lower for term in ["cierre intraday", "cierre de bolsa", "cierre de mercado", "square off", "square-off"]):
+                logger.info(f"Notificación de cierre de bolsa omitida según preferencia del usuario: {title}")
+                return True
+
         formatted_msg = f"🔔 *{title}* [{level}]\n\n{message}"
         logger.info(f"ALERTA BOT [{level}]: {title} - {message}")
 

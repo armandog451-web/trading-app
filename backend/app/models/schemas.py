@@ -136,6 +136,7 @@ class TestMoomooRequest(BaseModel):
 class TelegramConfigUpdate(BaseModel):
     telegram_bot_token: str
     telegram_chat_id: str
+    notify_market_close: Optional[bool] = False
 
 class TestTelegramRequest(BaseModel):
     telegram_bot_token: Optional[str] = None

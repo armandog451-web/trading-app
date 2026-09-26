@@ -105,6 +105,8 @@ class SettingsManager:
                     token=saved["TELEGRAM_BOT_TOKEN"],
                     chat_id=saved.get("TELEGRAM_CHAT_ID", notifier.telegram_chat_id)
                 )
+            if "NOTIFY_MARKET_CLOSE" in saved:
+                settings.NOTIFY_MARKET_CLOSE = str(saved["NOTIFY_MARKET_CLOSE"]).lower() in ("true", "1")
 
             # 2. Broker Activo
             if "ACTIVE_BROKER" in saved:

@@ -1,23 +1,32 @@
 # TradePulse - Lanzador Unificado
 $ErrorActionPreference = "Stop"
 
-$nodeDir = "C:\Users\edsel\AppData\Local\Microsoft\WinGet\Packages\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\node-v24.19.0-win-x64"
+$rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$venvPy = "$rootDir\backend\.venv\Scripts\python.exe"
 $pyDir = "C:\Users\edsel\AppData\Local\Programs\Python\Python311"
 $pyScripts = "C:\Users\edsel\AppData\Local\Programs\Python\Python311\Scripts"
+$nodeDir = "C:\Program Files\nodejs"
 
-$env:Path = "$pyDir;$pyScripts;$nodeDir;" + $env:Path
+if (Test-Path $venvPy) {
+    $pyExe = $venvPy
+} elseif (Test-Path "$pyDir\python.exe") {
+    $pyExe = "$pyDir\python.exe"
+    $env:Path = "$pyDir;$pyScripts;$nodeDir;" + $env:Path
+} elseif (Get-Command python -ErrorAction SilentlyContinue) {
+    $pyExe = (Get-Command python).Source
+} else {
+    $pyExe = "python.exe"
+}
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " TradePulse Quantitative Day Trading Engine" -ForegroundColor Green
 Write-Host " Arquitectura Top-Down (Macro, COT, Opciones, Liquidez & R:R)" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-
 Write-Host "Iniciando TradePulse Engine en http://localhost:8000..." -ForegroundColor Yellow
 
 # Iniciar servidor backend unificado
-$backendProc = Start-Process -FilePath "$pyDir\python.exe" -ArgumentList "run.py" -WorkingDirectory "$rootDir\backend" -PassThru
+$backendProc = Start-Process -FilePath $pyExe -ArgumentList "run.py" -WorkingDirectory "$rootDir\backend" -PassThru
 
 # Esperar 2 segundos a que el servidor inicialice
 Start-Sleep -Seconds 2

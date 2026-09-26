@@ -41,6 +41,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   // Telegram state
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
+  const [notifyMarketClose, setNotifyMarketClose] = useState(false);
   const [testingTg, setTestingTg] = useState(false);
   const [tgFeedback, setTgFeedback] = useState(null);
 
@@ -71,6 +72,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           if (cfg.notifications) {
             setTelegramToken(cfg.notifications.telegram_bot_token || '');
             setTelegramChatId(cfg.notifications.telegram_chat_id || '');
+            setNotifyMarketClose(Boolean(cfg.notifications.notify_market_close));
           }
         }
       }).catch(console.error);
@@ -164,7 +166,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         moomoo_acc_id: Number(moomooAccId)
       });
 
-      await updateTelegramSettings(telegramToken, telegramChatId);
+      await updateTelegramSettings(telegramToken, telegramChatId, notifyMarketClose);
 
       setSavedMsg(`Configuraciones guardadas. Broker: ${activeBroker} | Modo: ${autoExecuteTrades ? 'Ejecución Automática' : 'Solo Notificaciones'}`);
       setTimeout(() => setSavedMsg(''), 3500);
@@ -570,6 +572,22 @@ export default function SettingsModal({ isOpen, onClose }) {
                   placeholder="Ej: 123456789"
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
                 />
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900 border border-slate-700/60">
+                <div>
+                  <span className="text-xs text-slate-200 font-medium block">Notificaciones de Cierre de Bolsa</span>
+                  <span className="text-[10px] text-slate-400 block">Alertas de final de sesión y cierre forzoso (15:50 EST)</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifyMarketClose}
+                    onChange={e => setNotifyMarketClose(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
               </div>
 
               <div className="pt-1">

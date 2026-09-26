@@ -107,11 +107,15 @@ export async function testMoomooConnection(data) {
 
 
 
-export async function updateTelegramSettings(token, chatId) {
+export async function updateTelegramSettings(token, chatId, notifyMarketClose = false) {
   const res = await fetch(`${API_BASE}/settings/telegram`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_bot_token: token, telegram_chat_id: chatId }),
+    body: JSON.stringify({
+      telegram_bot_token: token,
+      telegram_chat_id: chatId,
+      notify_market_close: notifyMarketClose
+    }),
   });
   return res.json();
 }

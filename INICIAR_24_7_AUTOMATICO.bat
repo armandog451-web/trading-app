@@ -8,7 +8,10 @@ echo    Objetivo: Mantener Bot y Moomoo siempre activos sin intervencion
 echo ==============================================================
 echo.
 
-set "PY_EXE=C:\Users\edsel\AppData\Local\Programs\Python\Python311\python.exe"
+set "PY_EXE=%~dp0backend\.venv\Scripts\python.exe"
+if not exist "%PY_EXE%" (
+    set "PY_EXE=C:\Users\edsel\AppData\Local\Programs\Python\Python311\python.exe"
+)
 if not exist "%PY_EXE%" (
     set "PY_EXE=python.exe"
 )

@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
     DISCORD_WEBHOOK_URL: str = ""
+    NOTIFY_MARKET_CLOSE: bool = False
 
     # Network / SSL
     SSL_VERIFY: bool = False

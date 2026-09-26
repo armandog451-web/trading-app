@@ -32,6 +32,7 @@ class BotRunner:
         self.circuit_breaker_tripped = False
         self.last_scan_time: datetime | None = None
         self.active_universe = ["QQQ", "SPY", "TSLA", "AAPL", "MSFT"]
+        self._square_off_done = False
 
     async def start(self):
         """Inicia el bot en segundo plano de forma instantánea."""
@@ -77,11 +78,16 @@ class BotRunner:
 
                 # 1. Comprobar Cierre Forzoso Intraday (15:50 EST)
                 if risk_engine.should_square_off():
-                    logger.warning("HORA 15:50 EST ALCANZADA: Cierre forzoso de posiciones intraday.")
-                    await broker_manager.close_all_positions()
-                    await notifier.send_alert("Cierre Intraday (15:50 EST)", "Todas las posiciones intraday se han cerrado automáticamente sin riesgo nocturno.", "INFO")
+                    if not self._square_off_done:
+                        logger.warning("HORA 15:50 EST ALCANZADA: Cierre forzoso de posiciones intraday.")
+                        await broker_manager.close_all_positions()
+                        if getattr(settings, "NOTIFY_MARKET_CLOSE", False):
+                            await notifier.send_alert("Cierre Intraday (15:50 EST)", "Todas las posiciones intraday se han cerrado automáticamente sin riesgo nocturno.", "INFO")
+                        self._square_off_done = True
                     await asyncio.sleep(60)
                     continue
+                else:
+                    self._square_off_done = False
 
                 # 2. Consultar cuenta y verificar Circuit Breaker
                 account = await broker_manager.get_account()

@@ -40,7 +40,8 @@ def get_current_settings():
             "telegram_active": bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID),
             "telegram_bot_token": settings.TELEGRAM_BOT_TOKEN,
             "telegram_chat_id": settings.TELEGRAM_CHAT_ID,
-            "discord_active": bool(settings.DISCORD_WEBHOOK_URL)
+            "discord_active": bool(settings.DISCORD_WEBHOOK_URL),
+            "notify_market_close": getattr(settings, "NOTIFY_MARKET_CLOSE", False)
         }
     }
 
@@ -152,9 +153,14 @@ async def test_moomoo_credentials(cfg: TestMoomooRequest):
 def update_telegram_settings(cfg: TelegramConfigUpdate):
     """Actualiza y guarda permanentemente las credenciales de Telegram Bot."""
     notifier.update_telegram_credentials(cfg.telegram_bot_token, cfg.telegram_chat_id)
-    settings_manager.save_settings_dict({
+    save_dict = {
         "TELEGRAM_BOT_TOKEN": cfg.telegram_bot_token,
         "TELEGRAM_CHAT_ID": cfg.telegram_chat_id
-    })
-    return {"success": True, "message": "Credenciales de Telegram guardadas permanentemente"}
+    }
+    if cfg.notify_market_close is not None:
+        settings.NOTIFY_MARKET_CLOSE = cfg.notify_market_close
+        save_dict["NOTIFY_MARKET_CLOSE"] = cfg.notify_market_close
+
+    settings_manager.save_settings_dict(save_dict)
+    return {"success": True, "message": "Credenciales y preferencias de Telegram guardadas permanentemente"}
 
