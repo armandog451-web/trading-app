@@ -28,18 +28,26 @@ async def get_technical_analysis(symbol: str):
     Factores de la Capa 4: Velas intraday, VWAP, Bandas y Niveles de Liquidez (PDH/PDL/PMH/PML)
     para alimentar los gráficos de velas japonesas TradingView.
     """
-    symbol = symbol.upper()
-    intraday_df, daily_df = bot_runner._generate_sample_market_data(symbol)
-    df_vwap = technical_engine.calculate_vwap(intraday_df)
-    levels = technical_engine.extract_liquidity_levels(daily_df, intraday_df)
-    setup = technical_engine.evaluate_setup(symbol, df_vwap, levels)
+    try:
+        symbol = symbol.upper()
+        intraday_df, daily_df = bot_runner._generate_sample_market_data(symbol)
+        df_vwap = technical_engine.calculate_vwap(intraday_df)
+        levels = technical_engine.extract_liquidity_levels(daily_df, intraday_df)
+        setup = technical_engine.evaluate_setup(symbol, df_vwap, levels)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
     # Convertir a formato compatible con Lightweight Charts y Canvas enriquecido
     candles = []
     for i, row in df_vwap.iterrows():
-        total_minutes = 9 * 60 + 30 + (i * 5)
-        hh = total_minutes // 60
-        mm = total_minutes % 60
+        if hasattr(i, 'hour'):
+            hh = i.hour
+            mm = i.minute
+        else:
+            total_minutes = 9 * 60 + 30 + (int(i) * 5)
+            hh = total_minutes // 60
+            mm = total_minutes % 60
         time_str = f"{hh:02d}:{mm:02d}"
 
         candles.append({
