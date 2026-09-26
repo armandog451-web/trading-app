@@ -162,4 +162,10 @@ export async function executeNotificationTrade(id) {
   return res.json();
 }
 
+export async function syncGitHub() {
+  const res = await fetch(`${API_BASE}/settings/sync-github`, { method: 'POST' });
+  return res.json();
+}
+
+
 

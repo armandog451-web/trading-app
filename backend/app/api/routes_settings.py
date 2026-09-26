@@ -164,3 +164,54 @@ def update_telegram_settings(cfg: TelegramConfigUpdate):
     settings_manager.save_settings_dict(save_dict)
     return {"success": True, "message": "Credenciales y preferencias de Telegram guardadas permanentemente"}
 
+
+@router.post("/sync-github")
+async def sync_github():
+    """
+    Sincroniza y sube todos los cambios locales al repositorio GitHub configurado.
+    """
+    import subprocess
+    import os
+    import datetime
+
+    repo_dir = settings.BASE_DIR
+    git_cmd = os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe")
+    if not os.path.exists(git_cmd):
+        git_cmd = "git"
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        # git add .
+        subprocess.run([git_cmd, "add", "."], cwd=repo_dir, capture_output=True, text=True, check=True)
+        # git commit
+        commit_res = subprocess.run([git_cmd, "commit", "-m", f"Auto-sync TradePulse: {now_str}"], cwd=repo_dir, capture_output=True, text=True)
+        # git push
+        push_res = subprocess.run([git_cmd, "push", "origin", "main"], cwd=repo_dir, capture_output=True, text=True, timeout=15)
+
+        if push_res.returncode == 0:
+            return {
+                "success": True,
+                "message": f"¡Sincronización exitosa con GitHub! [{now_str}]",
+                "detail": push_res.stdout or commit_res.stdout
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Aviso: Git requiere autorización. Haz doble clic en 'Sincronizar con GitHub' en el escritorio para iniciar sesión en GitHub.",
+                "detail": push_res.stderr or push_res.stdout
+            }
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Git Credential Manager está esperando autorización. Haz doble clic en 'Sincronizar con GitHub' en el escritorio para iniciar sesión.",
+            "detail": "Git push timed out (credential prompt pending)"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error ejecutando sincronización: {str(e)}",
+            "detail": str(e)
+        }
+
+

@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 class Settings(BaseSettings):
+    BASE_DIR: str = BASE_DIR
     # App basic
     APP_NAME: str = "TradePulse Quantitative Intraday Engine"
     ENV: str = "development"
