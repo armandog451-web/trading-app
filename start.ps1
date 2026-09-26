@@ -31,9 +31,26 @@ $backendProc = Start-Process -FilePath $pyExe -ArgumentList "run.py" -WorkingDir
 # Esperar 2 segundos a que el servidor inicialice
 Start-Sleep -Seconds 2
 
-# Abrir automáticamente el navegador web
-Write-Host "Abriendo panel de control en tu navegador..." -ForegroundColor Green
-Start-Process "http://localhost:8000"
+# Abrir exclusivamente en Google Chrome
+Write-Host "Abriendo panel de control en Google Chrome..." -ForegroundColor Green
+$chromePaths = @(
+    "C:\Program Files\Google\Chrome\Application\chrome.exe",
+    "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+)
+$chromeExe = $null
+foreach ($cp in $chromePaths) {
+    if (Test-Path $cp) {
+        $chromeExe = $cp
+        break
+    }
+}
+
+if ($chromeExe) {
+    Start-Process -FilePath $chromeExe -ArgumentList "http://localhost:8000"
+} else {
+    Start-Process "http://localhost:8000"
+}
 
 Write-Host ""
 Write-Host ">> APLICACION ACTIVA Y FUNCIONANDO <<" -ForegroundColor Green
