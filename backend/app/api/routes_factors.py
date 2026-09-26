@@ -40,18 +40,22 @@ async def get_technical_analysis(symbol: str):
 
     # Convertir a formato compatible con Lightweight Charts y Canvas enriquecido
     candles = []
-    for i, row in df_vwap.iterrows():
-        if hasattr(i, 'hour'):
-            hh = i.hour
-            mm = i.minute
+    for idx_num, (i, row) in enumerate(df_vwap.iterrows()):
+        if hasattr(i, 'timestamp'):
+            unix_ts = int(i.timestamp())
+            time_str = i.strftime("%H:%M")
+        elif hasattr(i, 'hour'):
+            unix_ts = int(1726740000 + (idx_num * 300))
+            time_str = f"{i.hour:02d}:{i.minute:02d}"
         else:
-            total_minutes = 9 * 60 + 30 + (int(i) * 5)
+            total_minutes = 9 * 60 + 30 + (idx_num * 5)
             hh = total_minutes // 60
             mm = total_minutes % 60
-        time_str = f"{hh:02d}:{mm:02d}"
+            unix_ts = int(1726740000 + (idx_num * 300))
+            time_str = f"{hh:02d}:{mm:02d}"
 
         candles.append({
-            "time": int(1726740000 + (i * 300)),  # Timestamps espaciados en 5m
+            "time": unix_ts,
             "time_str": time_str,
             "open": round(float(row['open']), 2),
             "high": round(float(row['high']), 2),
