@@ -106,6 +106,18 @@ class BacktestResultResponse(BaseModel):
     trades: list[dict[str, Any]]
     equity_curve: list[dict[str, Any]]
 
+class MT5BacktestRequest(BaseModel):
+    symbols: list[str] = ["EURUSD"]
+    timeframe: str = "M5"
+    bars_count: int = 1000
+    initial_capital: float = 100000.0
+    risk_per_trade_pct: float = 1.0
+    rvol_threshold: float = 1.4
+    tp1_rr: float = 1.5
+    tp2_rr: float = 3.0
+    send_telegram: bool = False
+
+
 class RiskConfigUpdate(BaseModel):
     max_daily_loss_pct: float
     risk_per_trade_pct: float

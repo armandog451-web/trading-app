@@ -69,6 +69,29 @@ export async function runBacktest(params) {
   return res.json();
 }
 
+export async function fetchMT5Status() {
+  const res = await fetch(`${API_BASE}/backtest/mt5/status`);
+  return res.json();
+}
+
+export async function runMT5Backtest(params) {
+  const res = await fetch(`${API_BASE}/backtest/mt5/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+export async function sendMT5TelegramReport(payload) {
+  const res = await fetch(`${API_BASE}/backtest/mt5/send-telegram`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
 export async function fetchSettings() {
   const res = await fetch(`${API_BASE}/settings`);
   return res.json();
