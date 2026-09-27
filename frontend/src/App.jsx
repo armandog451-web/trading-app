@@ -23,7 +23,8 @@ import {
   fetchScreenerStocks,
   fetchTechnicalData,
   fetchNotifications,
-  syncGitHub
+  syncGitHub,
+  fetchLatencyAudit
 } from './services/api';
 
 export default function App() {
@@ -175,6 +176,19 @@ export default function App() {
     }
   };
 
+  const handleAuditLatency = async () => {
+    showToast('Ejecutando auditoría de latencia de red...', 'info');
+    try {
+      const rep = await fetchLatencyAudit();
+      const statusText = rep.high_latency_mode ? 'ALERTA: Umbral 50ms superado. Protocolo de emergencia WebSocket activo.' : 'ÓPTIMO: Latencia dentro del umbral (<50ms).';
+      const type = rep.high_latency_mode ? 'warn' : 'success';
+      showToast(`Moomoo: ${rep.opend_latency_ms}ms | Alpaca: ${rep.alpaca_latency_ms}ms — ${statusText}`, type);
+      refreshData();
+    } catch (err) {
+      showToast('Error al auditar latencia: ' + err.message, 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0E14] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
       
@@ -205,6 +219,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onSyncGitHub={handleSyncGitHub}
         isSyncing={isSyncingGit}
+        onAuditLatency={handleAuditLatency}
       />
 
       {/* Main Workspace */}

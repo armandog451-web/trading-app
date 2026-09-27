@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models.db_models import Trade
 from app.core.bot_runner import bot_runner
 from app.core.broker_manager import broker_manager
+from app.core.master_trading_engine import master_trading_engine
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
@@ -24,8 +25,16 @@ async def get_dashboard_status():
         "daily_pnl_pct": account.get("daily_pnl_pct", 0.0),
         "open_positions_count": len(positions),
         "monitored_symbols": bot_runner.active_universe,
-        "active_broker": broker_manager.get_active_broker_name()
+        "active_broker": broker_manager.get_active_broker_name(),
+        "latency": master_trading_engine.get_latency_report()
     }
+
+@router.get("/latency")
+async def get_latency_audit():
+    """Auditoría y optimización de latencia en tiempo real (Moomoo OpenD vs. Alpaca)."""
+    master_trading_engine.audit_and_optimize_latency(verbose=True)
+    return master_trading_engine.get_latency_report()
+
 
 @router.post("/bot/start")
 async def start_bot():

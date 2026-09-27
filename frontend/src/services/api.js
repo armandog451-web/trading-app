@@ -5,6 +5,11 @@ export async function fetchDashboardStatus() {
   return res.json();
 }
 
+export async function fetchLatencyAudit() {
+  const res = await fetch(`${API_BASE}/dashboard/latency`);
+  return res.json();
+}
+
 export async function startBot() {
   const res = await fetch(`${API_BASE}/dashboard/bot/start`, { method: 'POST' });
   return res.json();

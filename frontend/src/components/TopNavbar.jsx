@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Play, Pause, AlertOctagon, Settings as SettingsIcon, ShieldCheck, Zap, Bell, HelpCircle, GitBranch } from 'lucide-react';
+import { Activity, Play, Pause, AlertOctagon, Settings as SettingsIcon, ShieldCheck, Zap, Bell, HelpCircle, GitBranch, Network } from 'lucide-react';
 
 export default function TopNavbar({
   status,
@@ -14,13 +14,19 @@ export default function TopNavbar({
   activeTab,
   setActiveTab,
   onSyncGitHub,
-  isSyncing = false
+  isSyncing = false,
+  onAuditLatency
 }) {
   const isRunning = status?.is_running || false;
   const equity = status?.account_equity || 100000;
   const dailyPnl = status?.daily_pnl || 0;
   const dailyPnlPct = status?.daily_pnl_pct || 0;
   const circuitBreaker = status?.circuit_breaker_tripped || false;
+
+  const latency = status?.latency;
+  const moomooLat = latency?.opend_latency_ms || 0;
+  const alpacaLat = latency?.alpaca_latency_ms || 0;
+  const isHighLatency = latency?.high_latency_mode || false;
 
   return (
     <header className="border-b border-slate-800 bg-[#0E131F]/90 backdrop-blur sticky top-0 z-40 px-6 py-3">
@@ -82,6 +88,33 @@ export default function TopNavbar({
               <ShieldCheck className="w-3.5 h-3.5" />
               {status?.mode || 'Alpaca Paper'}
             </span>
+          </div>
+
+          <div className="h-6 w-[1px] bg-slate-800 hidden sm:block" />
+
+          {/* Latencia & Motor Maestro */}
+          <div 
+            onClick={onAuditLatency}
+            title="Motor Maestro: Latencia en tiempo real (Umbral 50ms). Clic para auditar ahora."
+            className="cursor-pointer group flex flex-col justify-center"
+          >
+            <span className="text-[10px] uppercase text-slate-400 font-medium flex items-center gap-1 group-hover:text-cyan-300 transition">
+              <Network className="w-3 h-3 text-cyan-400" />
+              Latencia OpenD / Alpaca
+            </span>
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] ${moomooLat <= 50 ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
+                Moomoo:{moomooLat > 0 ? `${moomooLat}ms` : '--'}
+              </span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] ${alpacaLat <= 50 ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
+                Alpaca:{alpacaLat > 0 ? `${alpacaLat}ms` : '--'}
+              </span>
+              {isHighLatency && (
+                <span className="text-[9px] font-sans font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded" title="Protocolo de Alta Latencia Activo: Priorizando sockets persistentes y reduciendo I/O">
+                  WS-OPT
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
