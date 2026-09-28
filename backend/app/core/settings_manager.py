@@ -169,6 +169,9 @@ class SettingsManager:
             if "MAX_OPEN_POSITIONS" in saved:
                 val = int(saved["MAX_OPEN_POSITIONS"])
                 settings.MAX_OPEN_POSITIONS = val
+            if "MAX_OPTION_COST_PER_CONTRACT" in saved:
+                val = float(saved["MAX_OPTION_COST_PER_CONTRACT"])
+                settings.MAX_OPTION_COST_PER_CONTRACT = val
 
             logger.info(f"SettingsManager: {len(saved)} configuraciones cargadas exitosamente desde persistencia.")
 

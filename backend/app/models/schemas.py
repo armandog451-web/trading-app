@@ -124,6 +124,7 @@ class RiskConfigUpdate(BaseModel):
     min_rr_ratio: float
     auto_square_off_time: str
     max_open_positions: int
+    max_option_cost_per_contract: Optional[float] = 200.0
 
 class BrokerConfigUpdate(BaseModel):
     active_broker: Optional[str] = "ALPACA"

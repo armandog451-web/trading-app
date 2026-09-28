@@ -18,7 +18,8 @@ def get_current_settings():
             "risk_per_trade_pct": risk_engine.risk_per_trade_pct,
             "min_rr_ratio": risk_engine.min_rr_ratio,
             "auto_square_off_time": risk_engine.auto_square_off_time,
-            "max_open_positions": settings.MAX_OPEN_POSITIONS
+            "max_open_positions": settings.MAX_OPEN_POSITIONS,
+            "max_option_cost_per_contract": getattr(settings, "MAX_OPTION_COST_PER_CONTRACT", 200.0)
         },
         "broker": {
             "active_broker": settings.ACTIVE_BROKER,
@@ -52,14 +53,16 @@ def update_risk_settings(cfg: RiskConfigUpdate):
     risk_engine.risk_per_trade_pct = cfg.risk_per_trade_pct
     risk_engine.min_rr_ratio = cfg.min_rr_ratio
     risk_engine.auto_square_off_time = cfg.auto_square_off_time
-    settings.MAX_OPEN_POSITIONS = cfg.max_open_positions
+    if cfg.max_option_cost_per_contract is not None:
+        settings.MAX_OPTION_COST_PER_CONTRACT = float(cfg.max_option_cost_per_contract)
 
     settings_manager.save_settings_dict({
         "MAX_DAILY_LOSS_PCT": cfg.max_daily_loss_pct,
         "RISK_PER_TRADE_PCT": cfg.risk_per_trade_pct,
         "MIN_RR_RATIO": cfg.min_rr_ratio,
         "AUTO_SQUARE_OFF_TIME": cfg.auto_square_off_time,
-        "MAX_OPEN_POSITIONS": cfg.max_open_positions
+        "MAX_OPEN_POSITIONS": cfg.max_open_positions,
+        "MAX_OPTION_COST_PER_CONTRACT": getattr(settings, "MAX_OPTION_COST_PER_CONTRACT", 200.0)
     })
 
     return {"success": True, "message": "Parámetros de riesgo guardados permanentemente"}

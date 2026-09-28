@@ -20,7 +20,8 @@ def test_options_engine_call_and_put():
     assert call_res["premium_est"] > 0
     assert call_res["premium_stop_loss"] < call_res["premium_est"]
     assert call_res["premium_take_profit"] > call_res["premium_est"]
-    assert call_res["contracts"] >= 1
+    assert call_res["contracts"] == 1
+    assert call_res["total_cost"] <= 200.0
     assert call_res["risk_reward"] >= 1.5
 
     # 2. Test Put Contract (Bearish bias)
@@ -35,7 +36,8 @@ def test_options_engine_call_and_put():
     assert put_res["action"] == "BUY_PUT"
     assert put_res["strike_price"] <= 483.0
     assert put_res["premium_est"] > 0
-    assert put_res["contracts"] >= 1
+    assert put_res["contracts"] == 1
+    assert put_res["total_cost"] <= 200.0
 
 import asyncio
 

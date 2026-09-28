@@ -37,6 +37,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [minRr, setMinRr] = useState(2.0);
   const [squareOffTime, setSquareOffTime] = useState('15:50');
   const [maxPositions, setMaxPositions] = useState(3);
+  const [maxOptionCost, setMaxOptionCost] = useState(200.0);
 
   // Telegram state
   const [telegramToken, setTelegramToken] = useState('');
@@ -56,6 +57,9 @@ export default function SettingsModal({ isOpen, onClose }) {
           setMinRr(cfg.risk.min_rr_ratio);
           setSquareOffTime(cfg.risk.auto_square_off_time);
           setMaxPositions(cfg.risk.max_open_positions);
+          if (cfg.risk.max_option_cost_per_contract !== undefined) {
+            setMaxOptionCost(cfg.risk.max_option_cost_per_contract);
+          }
 
           if (cfg.broker) {
             if (cfg.broker.active_broker) setActiveBroker(cfg.broker.active_broker);
@@ -150,7 +154,8 @@ export default function SettingsModal({ isOpen, onClose }) {
         risk_per_trade_pct: Number(riskPerTrade),
         min_rr_ratio: Number(minRr),
         auto_square_off_time: squareOffTime,
-        max_open_positions: Number(maxPositions)
+        max_open_positions: Number(maxPositions),
+        max_option_cost_per_contract: Number(maxOptionCost)
       });
 
       await updateBrokerSettings({
@@ -336,6 +341,18 @@ export default function SettingsModal({ isOpen, onClose }) {
                   onChange={e => setSquareOffTime(e.target.value)}
                   placeholder="15:50"
                   className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-emerald-400 font-semibold block mb-1">Costo Máx Opciones ($ USD/Contrato)</label>
+                <input
+                  type="number"
+                  step="10"
+                  value={maxOptionCost}
+                  onChange={e => setMaxOptionCost(e.target.value)}
+                  placeholder="200"
+                  className="w-full bg-slate-900 border border-emerald-500/40 text-emerald-300 rounded-lg p-2 text-xs font-mono"
                 />
               </div>
             </div>

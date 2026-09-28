@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     MIN_RR_RATIO: float = 2.0
     MAX_OPEN_POSITIONS: int = 3
     AUTO_SQUARE_OFF_TIME: str = "15:50"
+    MAX_OPTION_COST_PER_CONTRACT: float = 200.0  # Máximo $200 USD por contrato de opciones
 
     # Trading parameters (demo friendly)
     OPEN_MINUTES: int = 1

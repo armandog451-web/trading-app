@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timedelta
 import logging
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -8,10 +9,10 @@ class OptionsEngine:
     """
     Motor Cuantitativo de Opciones Financieras (Options Contract Engine).
     Estructura recomendaciones automáticas de contratos CALL y PUT para Day/Swing Trading:
-    - Selección de Strike óptimo (ATM o ligeramente OTM con Delta ~0.45-0.50).
-    - Vencimiento semanal de alta liquidez (2 a 7 DTE).
-    - Estimación de prima, Stop Loss en prima (-25% a -30%) y Take Profit (+50% a +100%).
-    - Dimensionamiento del número de contratos respetando el 1% de riesgo del capital.
+    - Selección de Strike óptimo (ATM o ligeramente OTM respetando presupuesto máx de $200 USD por contrato).
+    - Vencimiento semanal de alta liquidez (2 a 4 semanas / ~14 a 30 DTE).
+    - Estimación de prima, Stop Loss en prima (-28%) y Take Profit (+50% a +100%).
+    - Dimensionamiento del número de contratos fijado a 1 contrato y costo <= MAX_OPTION_COST_PER_CONTRACT ($200 USD).
     """
 
     def calculate_option_contract(
@@ -38,15 +39,9 @@ class OptionsEngine:
         else:
             strike_step = 0.5
 
-        # 2. Strike óptimo (ATM o 1 strike OTM para máximo apalancamiento y liquidez)
-        if is_call:
-            # Strike ligeramente superior o igual al precio actual
-            strike = math.ceil(current_price / strike_step) * strike_step
-        else:
-            # Strike ligeramente inferior o igual al precio actual
-            strike = math.floor(current_price / strike_step) * strike_step
-
-        strike = round(strike, 2)
+        # 2. Límite de costo máximo por contrato (por defecto $200 USD)
+        max_contract_cost = getattr(settings, "MAX_OPTION_COST_PER_CONTRACT", 200.0)
+        max_premium_per_share = round(max_contract_cost / 100.0, 2)
 
         # 3. Fecha de expiración extendida (2 a 4 semanas / ~14 a 30 DTE) para dar más margen y reducir Theta decay
         now = datetime.utcnow()
@@ -56,12 +51,49 @@ class OptionsEngine:
         final_exp = target_date + timedelta(days=days_until_friday)
         exp_date = final_exp.strftime("%Y-%m-%d")
 
-        # 4. Estimación de Prima para vencimientos a 2-4 semanas (~14-30 DTE)
+        # 4. Estimación de Prima y Selección de Strike (ATM vs OTM según presupuesto)
         pct_premium = 0.012 if symbol in ("SPY", "QQQ", "IWM") else 0.022
-        base_premium = round(current_price * pct_premium, 2)
-        premium_est = max(1.25, base_premium)
+        est_atm_premium = current_price * pct_premium
 
-        # 5. Niveles de salida en prima
+        is_otm_budget_adjusted = False
+        if est_atm_premium > max_premium_per_share:
+            # Si el contrato ATM supera el límite de costo ($200 USD):
+            # Se selecciona un Strike OTM (Out-of-The-Money) para encajar la prima dentro de los $200 USD
+            is_otm_budget_adjusted = True
+            otm_pct = min(0.045, max(0.018, (current_price / 1000.0) * 0.04))
+            if is_call:
+                target_strike = current_price * (1.0 + otm_pct)
+                strike = math.ceil(target_strike / strike_step) * strike_step
+            else:
+                target_strike = current_price * (1.0 - otm_pct)
+                strike = math.floor(target_strike / strike_step) * strike_step
+
+            premium_est = round(min(max_premium_per_share, max(0.85, max_premium_per_share * 0.92)), 2)
+            delta_est = 0.32 if is_call else -0.32
+        else:
+            # Contrato ATM estándar
+            if is_call:
+                strike = math.ceil(current_price / strike_step) * strike_step
+            else:
+                strike = math.floor(current_price / strike_step) * strike_step
+
+            base_premium = round(est_atm_premium, 2)
+            premium_est = round(min(max_premium_per_share, max(0.75, base_premium)), 2)
+            delta_est = 0.48 if is_call else -0.48
+
+        strike = round(strike, 2)
+
+        # 5. Dimensionamiento: Fijo a 1 solo contrato globalmente para todas las alertas
+        contracts = 1
+
+        # Total de capital asignado a la prima (1 contrato = 100 acciones)
+        total_cost = round(contracts * premium_est * 100.0, 2)
+        # Garantía estricta de no exceder el presupuesto configurado
+        if total_cost > max_contract_cost:
+            total_cost = max_contract_cost
+            premium_est = round(total_cost / 100.0, 2)
+
+        # 6. Niveles de salida en prima
         # Stop Loss: -28% de la prima
         premium_stop_loss = round(premium_est * 0.72, 2)
         # Take Profit 1: +50% de la prima
@@ -72,12 +104,6 @@ class OptionsEngine:
         risk_per_share = round(premium_est - premium_stop_loss, 2)
         reward_per_share = round(premium_take_profit_1 - premium_est, 2)
         rr_ratio = round(reward_per_share / risk_per_share, 2) if risk_per_share > 0 else 2.0
-
-        # 6. Dimensionamiento: Fijo a 1 solo contrato globalmente para todas las alertas
-        contracts = 1
-
-        # Total de capital asignado a la prima (1 contrato = 100 acciones)
-        total_cost = round(contracts * premium_est * 100.0, 2)
         total_risk_dollars = round(contracts * risk_per_share * 100.0, 2)
 
         # Código de ticker OCC estándar (ej. SPY260926C00560000)
@@ -86,11 +112,10 @@ class OptionsEngine:
         strike_code = f"{int(strike * 1000):08d}"
         occ_symbol = f"{symbol}{exp_code}{opt_char}{strike_code}"
 
-        delta_est = 0.48 if is_call else -0.48
-
+        budget_note = f" (Ajustado OTM a presupuesto máx ${max_contract_cost:.0f})" if is_otm_budget_adjusted else ""
         rationale = (
-            f"Contrato {option_type} con Strike ${strike} Exp {exp_date}. "
-            f"Delta estimado {delta_est:+.2f} con alta sensibilidad direccional gamma. "
+            f"Contrato {option_type} con Strike ${strike} Exp {exp_date}{budget_note}. "
+            f"Delta estimado {delta_est:+.2f}. Costo por contrato: ${total_cost:.2f} (Límite: ${max_contract_cost:.0f}). "
             f"Riesgo acotado en prima con SL al -28% (${premium_stop_loss}) y TP al +50% (${premium_take_profit_1})."
         )
 
