@@ -1,29 +1,15 @@
 @echo off
-title Instalar Auto-Arranque de TradePulse y Moomoo
+title Instalar Arranque Automatico con Windows
 cd /d "%~dp0"
 
-echo ==============================================================
-echo    Instalador de Auto-Arranque 24/7 con Windows
-echo ==============================================================
-echo.
-echo Creando Tarea Programada en Windows para que TradePulse y Moomoo
-echo arranquen automaticamente cada vez que se encienda la computadora...
+echo ============================================================
+echo   Configurando Arranque Automatico con Windows (24/7)
+echo ============================================================
 echo.
 
-schtasks /create /tn "TradePulse_24_7_AutoPilot" /tr "\"%~dp0INICIAR_24_7_AUTOMATICO.bat\"" /sc onlogon /rl highest /f
+powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $startupPath = [Environment]::GetFolderPath('Startup'); $shortcut = $WshShell.CreateShortcut(Join-Path $startupPath 'AlgortimTrading_24_7.lnk'); $shortcut.TargetPath = '%~dp0INICIAR_24_7_AUTOMATICO.bat'; $shortcut.WorkingDirectory = '%~dp0'; $shortcut.Save(); Write-Host 'Configurado con exito en:' $startupPath"
 
-if %errorlevel% equ 0 (
-    echo.
-    echo ==============================================================
-    echo [EXITO] Tarea registrada correctamente en Windows.
-    echo A partir de ahora, Moomoo y el Bot arrancaran automaticamente
-    echo cada vez que inicies Windows, sin que tengas que hacer nada.
-    echo ==============================================================
-) else (
-    echo.
-    echo [AVISO] Si dio error de permisos, por favor haz clic derecho
-    echo sobre este archivo y selecciona 'Ejecutar como Administrador'.
-)
-
+echo.
+echo [EXITO] Ahora el robot se iniciara solo cada vez que enciendas la PC o se reinicie.
 echo.
 pause

@@ -1,38 +1,8 @@
-# Environment variables & secrets
-.env
-*.env
-backend/.env
-
-# Databases & logs
-*.db
-*.sqlite
-*.log
-backend/trade_engine.db
-backend/watchdog.log
-
-# Python
+# .gitignore
 __pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.venv/
-venv/
-ENV/
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
-dist/
-build/
-.next/
-
-# IDE & OS
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-.agy/
+*.pyc
+env/
+*.env
+*.log
+*.sqlite3
+.ipynb_checkpoints/

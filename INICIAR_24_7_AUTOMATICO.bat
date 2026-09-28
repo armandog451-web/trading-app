@@ -1,26 +1,20 @@
 @echo off
-title TradePulse & Moomoo 24/7 Auto-Pilot
+title AlgortimTrading Robot - Monitor 24/7 (Watchdog Auto-Reinicio)
 cd /d "%~dp0"
 
-echo ==============================================================
-echo    TradePulse & Moomoo 24/7 - Sistema de Auto-Recuperacion
-echo    Objetivo: Mantener Bot y Moomoo siempre activos sin intervencion
-echo ==============================================================
+echo ============================================================
+echo   AlgortimTrading Robot v2.0 PRO - Modo 24/7 Autonomo
+echo ============================================================
+echo Este monitor mantiene el robot activo de forma ininterrumpida.
+echo Si el proceso se detiene o reinicia, se recuperara solo.
 echo.
 
-set "PY_EXE=%~dp0backend\.venv\Scripts\python.exe"
-if not exist "%PY_EXE%" (
-    set "PY_EXE=C:\Users\edsel\AppData\Local\Programs\Python\Python311\python.exe"
-)
-if not exist "%PY_EXE%" (
-    set "PY_EXE=python.exe"
-)
-
-echo Iniciando Vigilante Centinela 24/7...
-start "" "%PY_EXE%" "%~dp0backend\watchdog_24_7.py"
+:LOOP
+echo [%date% %time%] Iniciando servidor y motor de trading...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1"
 
 echo.
-echo [OK] El sistema esta corriendo y auto-vigilado.
-echo Si Moomoo o el Bot se caen, se reiniciaran solos en 10 segundos.
-echo Puedes minimizar esta ventana.
-timeout /t 5 >nul
+echo [AVISO] El proceso se detuvo a las %time%.
+echo Reiniciando en 5 segundos de forma automatica...
+timeout /t 5 /nobreak >nul
+goto LOOP

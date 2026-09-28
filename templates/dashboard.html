@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgortimTrading Robot v2.0 - Terminal Cuantitativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glow-emerald {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+        .card-bg {
+            background-color: #111827;
+            border: 1px solid #1f2937;
+        }
+        .card-inner {
+            background-color: #1a2234;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="card-bg border-b border-gray-800 px-6 py-3 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- BRAND / TITLE -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-robot text-xl text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-lg text-white tracking-wide">AlgortimTrading Robot</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v2.0 PRO</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Motor Cuantitativo Híbrido Multiestrategia (Alpaca & Moomoo)</p>
+                </div>
+            </div>
+
+            <!-- CONTROLS & STATUS -->
+            <div class="flex items-center flex-wrap gap-3">
+                
+                <!-- BOT STATUS BADGE & TOGGLE -->
+                <button id="btnToggleBot" onclick="toggleBot()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition card-inner border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span id="botStatusText">BOT ACTIVO</span>
+                </button>
+
+                <!-- FORCE SCAN NOW -->
+                <button onclick="scanNow()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition border border-gray-700">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>Escanear Ahora</span>
+                </button>
+
+                <!-- BROKER SELECTOR -->
+                <div class="flex items-center gap-1.5 bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1 text-xs">
+                    <i class="fa-solid fa-building-columns text-cyan-400"></i>
+                    <span class="text-gray-400">Broker:</span>
+                    <select id="brokerSelect" onchange="changeBroker(this.value)" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+                        <option value="alpaca" class="bg-gray-900 text-white">Alpaca Paper</option>
+                        <option value="moomoo" class="bg-gray-900 text-white">Moomoo OpenD</option>
+                    </select>
+                </div>
+
+                <!-- TELEGRAM STATUS PILL -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-sky-950/60 border border-sky-600/40 text-sky-300">
+                    <i class="fa-brands fa-telegram text-sky-400 text-sm"></i>
+                    <span>@LaraMayaBot</span>
+                    title="Enviar reporte de saldo y posiciones a Telegram" onclick="sendBalanceTelegram()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded transition ml-1 flex items-center gap-1"><span>💰 Saldo Telegram</span></button> <button onclick="testTelegram()" title="Enviar prueba de señal a Telegram" class="text-xs bg-sky-600 hover:bg-sky-500 text-white px-2 py-0.5 rounded transition ml-1">
+                        Test
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </header>
+
+    <!-- TICKER BAR -->
+    <div class="bg-gray-900/80 border-b border-gray-800/80 py-1.5 px-6 text-xs mono">
+        <div class="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto gap-6 text-gray-400">
+            <div class="flex items-center gap-5">
+                <span class="text-gray-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-crosshairs text-cyan-400"></i> WATCHLIST:</span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('QQQ')"><strong class="text-white">QQQ:</strong> $488.30 <span class="text-emerald-400">+1.24%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('SPY')"><strong class="text-white">SPY:</strong> $585.40 <span class="text-emerald-400">+0.88%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('NVDA')"><strong class="text-white">NVDA:</strong> $124.90 <span class="text-emerald-400">+2.40%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('TSLA')"><strong class="text-white">TSLA:</strong> $254.20 <span class="text-emerald-400">+3.15%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('AMD')"><strong class="text-white">AMD:</strong> $158.60 <span class="text-emerald-400">+1.95%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('AAPL')"><strong class="text-white">AAPL:</strong> $228.15 <span class="text-rose-400">-0.32%</span></span>
+                <span class="hover:text-white cursor-pointer" onclick="changeChart('MSFT')"><strong class="text-white">MSFT:</strong> $432.80 <span class="text-emerald-400">+0.65%</span></span>
+            </div>
+            <div class="flex items-center gap-4 text-[11px]">
+                <span class="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 flex items-center gap-1">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i> Guardián: Break-Even (+1R) & Cierre 15:55 EST
+                </span>
+                <div class="text-gray-400 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                    <span>Análisis: <span id="lastScanTime" class="text-gray-200">17:40:00</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTENT -->
+    <main class="max-w-7xl mx-auto w-full p-6 flex-1 space-y-6">
+
+        <!-- KPI METRICS ROW -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            
+            <div class="card-bg rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-gray-400 text-xs">
+                    <span>Balance Cuenta Demo</span>
+                    <i class="fa-solid fa-wallet text-emerald-400"></i>
+                </div>
+                <div class="mt-2">
+                    <span id="accBalance" class="text-2xl font-bold mono text-white">$100,000.00</span>
+                    <p class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1 font-medium">
+                        <i class="fa-solid fa-shield-check"></i> Paper Trading Activo
+                    </p>
+                </div>
+            </div>
+
+            <div class="card-bg rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-gray-400 text-xs">
+                    <span>Poder de Compra</span>
+                    <i class="fa-solid fa-bolt text-cyan-400"></i>
+                </div>
+                <div class="mt-2">
+                    <span id="accBuyingPower" class="text-2xl font-bold mono text-white">$200,000.00</span>
+                    <p class="text-[11px] text-cyan-400 mt-1 font-medium">Apalancamiento 2x Regulado</p>
+                </div>
+            </div>
+
+            <div class="card-bg rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-gray-400 text-xs">
+                    <span>P&L Total Algorítmico</span>
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                </div>
+                <div class="mt-2">
+                    <span class="text-2xl font-bold mono text-emerald-400">+$9,010.70</span>
+                    <p class="text-[11px] text-gray-400 mt-1">+9.01% rendimiento</p>
+                </div>
+            </div>
+
+            <div class="card-bg rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-gray-400 text-xs">
+                    <span>Efectividad (Win-Rate)</span>
+                    <i class="fa-solid fa-bullseye text-amber-400"></i>
+                </div>
+                <div class="mt-2">
+                    <span id="overallWinRate" class="text-2xl font-bold mono text-amber-400">68.8%</span>
+                    <p class="text-[11px] text-gray-400 mt-1">44 operaciones evaluadas</p>
+                </div>
+            </div>
+
+            <div class="card-bg rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-gray-400 text-xs">
+                    <span>Riesgo / Beneficio</span>
+                    <i class="fa-solid fa-scale-balanced text-indigo-400"></i>
+                </div>
+                <div class="mt-2">
+                    <span class="text-2xl font-bold mono text-indigo-400">1 : 2.0</span>
+                    <p class="text-[11px] text-gray-400 mt-1">Mínimo estricto garantizado</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MAIN 2-COLUMN SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- LEFT 2 COLUMNS: CHART & LIVE SIGNALS -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- INTERACTIVE TRADINGVIEW CHART CONTAINER -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-candlestick text-cyan-400"></i> Gráfico Técnico en Vivo:
+                            </span>
+                            <span id="currentChartSymbol" class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-cyan-900/60 text-cyan-300 border border-cyan-500/30">QQQ</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="changeChart('QQQ')" class="px-2.5 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-200 transition font-medium">QQQ</button>
+                            <button onclick="changeChart('SPY')" class="px-2.5 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-200 transition font-medium">SPY</button>
+                            <button onclick="changeChart('TSLA')" class="px-2.5 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-200 transition font-medium">TSLA</button>
+                            <button onclick="changeChart('AAPL')" class="px-2.5 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-200 transition font-medium">AAPL</button>
+                            <button onclick="changeChart('NVDA')" class="px-2.5 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-200 transition font-medium">NVDA</button>
+                        </div>
+                    </div>
+
+                    <!-- TRADINGVIEW WIDGET CONTAINER -->
+                    <div id="tradingview_widget_box" class="h-96 w-full bg-black">
+                        <!-- TradingView Widget BEGIN -->
+                        <div class="tradingview-widget-container" style="height:100%;width:100%">
+                            <iframe id="tv_iframe" src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=NASDAQ%3AQQQ&interval=5&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=%5B%22RSI%40tv-basicstudies%22%2C%22MASimple%40tv-basicstudies%22%5D&theme=dark&style=1&timezone=America%2FNew_York" style="width: 100%; height: 100%; margin: 0 !important; padding: 0 !important; border: none;"></iframe>
+                        </div>
+                        <!-- TradingView Widget END -->
+                    </div>
+                </div>
+
+                <!-- LIVE SIGNALS & ORDERS TERMINAL -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-radar text-emerald-400"></i>
+                            <h2 class="font-bold text-sm text-white">Señales Cuantitativas & Órdenes en Tiempo Real</h2>
+                        </div>
+                        <span class="text-xs text-gray-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Sincronizado con Telegram Bot
+                        </span>
+                    </div>
+
+                    <div class="p-4">
+                        <div id="signalsContainer" class="space-y-3">
+                            <!-- Signals loaded via JS -->
+                            <div class="text-center py-8 text-gray-400 text-xs">
+                                <i class="fa-solid fa-spinner fa-spin text-lg mb-2"></i>
+                                <p>Cargando flujo de señales algorítmicas...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPEN POSITIONS & RECENT EXECUTIONS -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-briefcase text-cyan-400"></i>
+                            <h2 class="font-bold text-sm text-white">Posiciones Abiertas en Broker</h2>
+                        </div>
+                        <span id="activeBrokerBadge" class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/50 font-mono font-medium">ALPACA PAPER</span>
+                    </div>
+                    <div class="p-4 overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-gray-800 pb-2">
+                                    <th class="pb-2 font-semibold">Símbolo</th>
+                                    <th class="pb-2 font-semibold">Lado</th>
+                                    <th class="pb-2 font-semibold">Cantidad</th>
+                                    <th class="pb-2 font-semibold">Precio Entrada</th>
+                                    <th class="pb-2 font-semibold">Precio Actual</th>
+                                    <th class="pb-2 font-semibold">P&L No Realizado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="positionsTableBody" class="divide-y divide-gray-800/50 mono">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-gray-400">Sin posiciones abiertas actualmente</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT 1 COLUMN: ADAPTIVE STRATEGIES & TELEGRAM & LOGS -->
+            <div class="space-y-6">
+
+                <!-- MODULE: STRATEGIES & ADAPTIVE MACHINE LEARNING -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-brain text-purple-400"></i>
+                            <h2 class="font-bold text-sm text-white">Estrategias (Aprendizaje Auto)</h2>
+                        </div>
+                        <span class="text-[11px] px-2 py-0.5 rounded bg-purple-900/40 text-purple-300 border border-purple-500/30">Pesos Dinámicos</span>
+                    </div>
+                    
+                    <div class="p-4 space-y-4">
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Algoritmo extraído de las 16 clases de trading. El robot auto-pondera cada estrategia según su efectividad histórica.
+                        </p>
+
+                        <div id="strategiesContainer" class="space-y-3">
+                            <!-- Strategies injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: TELEGRAM DIRECT CHANNEL -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-brands fa-telegram text-sky-400"></i>
+                            <h2 class="font-bold text-sm text-white">Canal Telegram Interactivo</h2>
+                        </div>
+                        <span class="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+                            Chat: 8887098910
+                        </span>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="bg-gray-900/90 rounded-lg p-3 border border-gray-800 text-xs space-y-2">
+                            <div class="flex items-center justify-between text-gray-400">
+                                <span>Bot: <strong class="text-white">@LaraMayaBot</strong></span>
+                                <span class="text-emerald-400 font-medium">En Línea</span>
+                            </div>
+                            <p class="text-gray-300 text-[11px]">
+                                Al generarse una señal, recibirás un mensaje en Telegram con dos botones: 
+                                <span class="text-emerald-300 font-semibold">[✅ Ejecutar Orden]</span> y 
+                                <span class="text-rose-300 font-semibold">[❌ Descartar]</span>.
+                            </p>
+                        </div>
+
+                        title="Enviar reporte de saldo y posiciones a Telegram" onclick="sendBalanceTelegram()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded transition ml-1 flex items-center gap-1"><span>💰 Saldo Telegram</span></button> <button onclick="testTelegram()" class="w-full py-2 px-3 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white transition flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Enviar Notificación de Prueba a Telegram</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MODULE: SYSTEM ACTIVITY LOGS -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
+                    <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-terminal text-gray-400"></i>
+                            <h2 class="font-bold text-sm text-white">Terminal de Eventos</h2>
+                        </div>
+                        <button onclick="loadLogs()" class="text-gray-400 hover:text-white text-xs">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+                    <div class="p-3 bg-black/60 mono text-[11px] h-48 overflow-y-auto space-y-1.5" id="logsContainer">
+                        <div class="text-gray-400">> Sistema iniciado correctamente...</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="card-bg border-t border-gray-800 py-3 px-6 text-center text-xs text-gray-400">
+        <p>AlgortimTrading Robot v2.0 • Diseñado para Edsel Armando • Estrategias Intradía Cuantitativas con Aprendizaje Continuo</p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-24 opacity-0 pointer-events-none bg-gray-900 border border-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toastMsg">Mensaje</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let currentSymbol = 'QQQ';
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.innerText = msg;
+            if (isError) {
+                toastIcon.className = 'fa-solid fa-circle-xmark text-rose-400 text-base';
+                toast.classList.add('border-rose-500/50');
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+                toast.classList.remove('border-rose-500/50');
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+            }, 3500);
+        }
+
+        function changeChart(sym) {
+            currentSymbol = sym;
+            document.getElementById('currentChartSymbol').innerText = sym;
+            const iframe = document.getElementById('tv_iframe');
+            iframe.src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=NASDAQ%3A${sym}&interval=5&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=%5B%22RSI%40tv-basicstudies%22%2C%22MASimple%40tv-basicstudies%22%5D&theme=dark&style=1&timezone=America%2FNew_York`;
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Bot toggle
+                const btn = document.getElementById('btnToggleBot');
+                const text = document.getElementById('botStatusText');
+                if (data.bot_running) {
+                    text.innerText = 'BOT ACTIVO';
+                    btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition card-inner border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10';
+                } else {
+                    text.innerText = 'BOT PAUSADO';
+                    btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition card-inner border border-rose-500/40 text-rose-300 hover:bg-rose-500/10';
+                }
+
+                // Balance & broker
+                if (data.account) {
+                    document.getElementById('accBalance').innerText = `$${data.account.cash.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    document.getElementById('accBuyingPower').innerText = `$${data.account.buying_power.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                
+                document.getElementById('brokerSelect').value = data.broker.toLowerCase();
+                document.getElementById('activeBrokerBadge').innerText = data.broker + ' DEMO';
+                if (data.last_scan) {
+                    document.getElementById('lastScanTime').innerText = data.last_scan;
+                }
+
+                // Positions table
+                renderPositions(data.positions || []);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderPositions(posList) {
+            const tbody = document.getElementById('positionsTableBody');
+            if (!posList || posList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400">Sin posiciones abiertas actualmente</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = posList.map(p => {
+                const isPlPositive = p.unrealized_pl >= 0;
+                return `
+                    <tr class="hover:bg-gray-800/30">
+                        <td class="py-2.5 font-bold text-white">${p.symbol}</td>
+                        <td class="py-2.5"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${p.side === 'BUY' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/50' : 'bg-rose-950 text-rose-300 border border-rose-700/50'}">${p.side}</span></td>
+                        <td class="py-2.5 text-gray-200">${p.qty}</td>
+                        <td class="py-2.5 text-gray-200">$${p.avg_entry_price.toFixed(2)}</td>
+                        <td class="py-2.5 text-gray-200">$${p.current_price.toFixed(2)}</td>
+                        <td class="py-2.5 font-bold ${isPlPositive ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${isPlPositive ? '+' : ''}$${p.unrealized_pl.toFixed(2)} (${isPlPositive ? '+' : ''}${p.unrealized_plpc.toFixed(2)}%)
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function fetchSignals() {
+            try {
+                const res = await fetch('/api/signals');
+                const signals = await res.json();
+                const container = document.getElementById('signalsContainer');
+
+                if (!signals || signals.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-400 text-xs">
+                            <i class="fa-solid fa-radar text-2xl text-gray-600 mb-2"></i>
+                            <p>Esperando la próxima señal del motor cuantitativo...</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = signals.slice(0, 8).map(s => {
+                    const isPending = s.status === 'PENDIENTE';
+                    const isExecuted = s.status === 'EJECUTADA';
+                    const isBuy = s.side === 'BUY';
+
+                    let statusBadge = '';
+                    if (isPending) {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">PENDIENTE CONFIRMACIÓN</span>`;
+                    } else if (isExecuted) {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">EJECUTADA EN BROKER</span>`;
+                    } else {
+                        statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-700 text-gray-400">DESCARTADA</span>`;
+                    }
+
+                    return `
+                        <div class="p-4 rounded-xl card-inner border ${isPending ? 'border-amber-500/40 glow-emerald' : 'border-gray-800'} transition">
+                            <div class="flex items-start justify-between flex-wrap gap-2">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-base font-bold text-white mono">${s.symbol}</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold ${isBuy ? 'bg-emerald-950 text-emerald-300 border border-emerald-600/40' : 'bg-rose-950 text-rose-300 border border-rose-600/40'}">
+                                        ${isBuy ? 'COMPRA (LONG)' : 'VENTA (SHORT)'}
+                                    </span>
+                                    <span class="text-xs text-gray-400 mono">${s.qty} acciones</span>
+                                </div>
+                                <div>${statusBadge}</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 my-3 text-xs mono bg-gray-900/60 p-2.5 rounded-lg border border-gray-800">
+                                <div><span class="text-gray-400 block text-[10px]">Precio Unitario:</span> <strong class="text-white">$${s.price.toFixed(2)}</strong></div>
+                                <div><span class="text-gray-400 block text-[10px]">Total Inversión:</span> <strong class="text-amber-300 font-bold">$${(s.price * s.qty).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+                                <div><span class="text-gray-400 block text-[10px]">Stop Loss:</span> <strong class="text-rose-400">$${s.stop_loss.toFixed(2)}</strong></div>
+                                <div><span class="text-gray-400 block text-[10px]">Take Profit:</span> <strong class="text-emerald-400">$${s.take_profit.toFixed(2)}</strong></div>
+                                <div><span class="text-gray-400 block text-[10px]">R:R / Confianza:</span> <strong class="text-cyan-400">${s.rr_ratio}:1 (${s.confidence.toFixed(0)}%)</strong></div>
+                            </div>
+
+                            <p class="text-xs text-gray-300 leading-relaxed mb-3">
+                                <strong class="text-indigo-300 font-semibold">[${s.strategy}]:</strong> ${s.rationale}
+                            </p>
+
+                            <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-gray-800/80">
+                                <span class="text-[11px] text-gray-400 mono">Detectado: ${s.created_at}</span>
+                                ${isPending ? `
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="executeOrder(${s.id})" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20">
+                                            <i class="fa-solid fa-check"></i> Ejecutar en Demo
+                                        </button>
+                                        <button onclick="cancelOrder(${s.id})" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                                            Descartar
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchStrategies() {
+            try {
+                const res = await fetch('/api/strategies');
+                const list = await res.json();
+                const container = document.getElementById('strategiesContainer');
+
+                container.innerHTML = list.map(st => {
+                    return `
+                        <div class="p-3 rounded-lg bg-gray-900/70 border border-gray-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-xs text-white">${st.display_name}</span>
+                                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/40">
+                                    Peso: ${st.weight.toFixed(2)}x
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-gray-400">${st.description}</p>
+                            
+                            <!-- Win Rate Bar -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[10px] text-gray-400 mono">
+                                    <span>Efectividad: ${st.win_rate}% (${st.wins}W / ${st.losses}L)</span>
+                                    <span class="text-emerald-400">+$${st.total_pnl.toFixed(0)}</span>
+                                </div>
+                                <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-purple-500 to-emerald-400 h-full rounded-full" style="width: ${st.win_rate}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Feedback Buttons for instant learning demonstration -->
+                            <div class="flex items-center justify-end gap-1.5 pt-1 text-[10px]">
+                                <span class="text-gray-400">Entrenar:</span>
+                                <button onclick="sendFeedback('${st.name}', true)" class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 hover:bg-emerald-900 border border-emerald-800/40" title="Añadir Win (+Peso)">+Win</button>
+                                <button onclick="sendFeedback('${st.name}', false)" class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800/40" title="Añadir Loss (-Peso)">-Loss</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                const container = document.getElementById('logsContainer');
+                container.innerHTML = logs.map(l => {
+                    let color = 'text-gray-400';
+                    if (l.level === 'SUCCESS') color = 'text-emerald-400';
+                    if (l.level === 'WARNING') color = 'text-amber-400';
+                    if (l.level === 'ERROR') color = 'text-rose-400';
+                    return `<div><span class="text-gray-400">[${l.timestamp.split(' ')[1]}]</span> <span class="${color}">[${l.level}]</span> ${l.message}</div>`;
+                }).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function toggleBot() {
+            const res = await fetch('/api/bot/toggle', {method: 'POST'});
+            const data = await res.json();
+            showToast(`Bot ${data.status}`);
+            fetchStatus();
+        }
+
+        async function scanNow() {
+            showToast('Analizando mercado y calculando estrategias...');
+            await fetch('/api/bot/scan-now', {method: 'POST'});
+            setTimeout(() => {
+                fetchSignals();
+                fetchStatus();
+                loadLogs();
+            }, 1000);
+        }
+
+        async function executeOrder(id) {
+            const res = await fetch(`/api/orders/execute/${id}`, {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                showToast('✅ Orden ejecutada con éxito en Demo');
+            } else {
+                showToast(data.message, true);
+            }
+            fetchSignals();
+            fetchStatus();
+            loadLogs();
+        }
+
+        async function cancelOrder(id) {
+            await fetch(`/api/orders/cancel/${id}`, {method: 'POST'});
+            showToast('❌ Señal descartada');
+            fetchSignals();
+            loadLogs();
+        }
+
+        async function sendFeedback(code, isWin) {
+            await fetch('/api/strategies/feedback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({strategy_code: code, is_win: isWin})
+            });
+            showToast('Modelo de aprendizaje actualizado');
+            fetchStrategies();
+            loadLogs();
+        }
+
+        
+        async function sendBalanceTelegram() {
+            try {
+                const res = await fetch('/api/telegram/send-balance', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ Estado de cuenta y saldo enviado a Telegram correctamente');
+                } else {
+                    alert('❌ Error enviando saldo a Telegram: ' + (data.message || 'Error'));
+                }
+            } catch (err) {
+                alert('❌ Error de conexión: ' + err.message);
+            }
+        }
+    
+        async function testTelegram() {
+            showToast('Enviando notificación interactiva a Telegram...');
+            const res = await fetch('/api/telegram/test', {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                showToast('🚀 Notificación enviada. Revisa tu Telegram!');
+            } else {
+                showToast('Error enviando a Telegram', true);
+            }
+        }
+
+        async function changeBroker(val) {
+            await fetch(`/api/broker/switch?broker_name=${val}`, {method: 'POST'});
+            showToast(`Broker configurado a: ${val.toUpperCase()}`);
+            fetchStatus();
+        }
+
+        // Initialize & poll
+        fetchStatus();
+        fetchSignals();
+        fetchStrategies();
+        loadLogs();
+
+        setInterval(() => {
+            fetchStatus();
+            fetchSignals();
+            loadLogs();
+        }, 3000);
+
+        setInterval(() => {
+            fetchStrategies();
+        }, 10000);
+    </script>
+</body>
+</html>

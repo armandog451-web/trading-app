@@ -1,98 +1,115 @@
-# TradingPulse Demo
+# 🤖 AlgortimTrading Robot v2.0 PRO
 
-## Overview
-
-**TradingPulse** is a simple algorithmic trading engine built in pure Python. It demonstrates:
-
-- Real‑time market data ingestion via a mock **Moomoo OpenD** TCP server.
-- An **Opening Range Breakout (ORB)** strategy with configurable opening window (`OPEN_MINUTES`).
-- Centralised configuration using a `Settings` class (environment variables via `.env`).
-- Structured JSON logging with **structlog**.
-- Trade persistence to a local SQLite database.
-- Optional Telegram notifications (place‑holder implementation).
-- Docker container support for easy reproducibility.
-
-The demo runs for a short period (30 s) to allow the 1‑minute opening window to complete and potentially generate a breakout signal.
+Motor de trading algorítmico profesional para cuentas Demo (**Moomoo OpenD** y **Alpaca Paper**) con **estrategia híbrida intradía**, panel de control en **Google Chrome** y notificaciones interactivas de ejecución con 1 toque en **Telegram**.
 
 ---
 
-## Prerequisites
+## 🌟 Características Principales
 
-- **Windows** (the project is set up for Windows paths).
-- Python **3.11** installed and accessible as `python` (or adjust the Dockerfile for another interpreter).
-- (Optional) Docker installed if you want to run the demo in a container.
-
----
-
-## Quick Start (local)
-
-1. **Clone the repository** (or copy the project folder) to a location on your machine.
-2. **Create a `.env` file** – copy the example provided:
-   ```
-   cp .env.example .env   # or manually create .env in the project root
-   ```
-   Fill in any real credentials you wish to use (Telegram bot token, Alpaca keys, etc.). For the demo you can leave them empty.
-3. **Install dependencies**:
-   ```
-   pip install structlog pydantic pydantic-settings httpx
-   ```
-   (If you add a `requirements.txt` you can `pip install -r requirements.txt`.)
-4. **Start the mock OpenD server** (runs in the background):
-   ```
-   python backend/mock_opend_server.py
-   ```
-   The server will emit a synthetic tick for each symbol every second.
-5. **Run the engine**:
-   ```
-   python backend/run_test_engine.py
-   ```
-   You should see JSON logs indicating the connection, opening‑range calculation, any breakout signals, order placement, and trade persistence.
-6. **Inspect persisted trades** (optional):
-   ```
-   sqlite3 backend/trade_engine.db "SELECT * FROM trades ORDER BY timestamp DESC LIMIT 10;"
-   ```
-   You will see rows with `symbol`, `side`, `price`, `size`, `stop_loss`, and timestamps.
+1. **Estrategia Híbrida Cuantitativa (16 Clases de Trading):**
+   * **Trend Following:** Cruce y expansión de EMA 20/50/200.
+   * **Mean Reversion:** Zonas extremas de agotamiento RSI(14) + Bandas de Bollinger.
+   * **Ruptura de Liquidez & Order Blocks:** Detección de barridos intradiarios con expansión de volumen (>1.3x).
+   * **Rebote VWAP Institucional:** Rebotes en el precio promedio ponderado por volumen.
+2. **Auto-Aprendizaje Continuo (Machine Learning Adaptativo):**
+   * El robot calibra y ajusta los pesos de cada estrategia según los aciertos y pérdidas (*Win/Loss*).
+3. **Guardián de Posiciones & Riesgo Institucional:**
+   * **Auto Break-Even (+1.0R):** Asegura la operación a precio de entrada cuando avanza la mitad del objetivo (riesgo cero).
+   * **Auto Square-Off (03:55 PM EST):** Cierre forzoso antes de la campana de Wall Street para eliminar el riesgo de *gaps* nocturnos.
+   * **Freno de Emergencia Diario (*Circuit Breaker* -2.5%):** Auto-pausa si la sesión acumula pérdida máxima diaria.
+   * **Riesgo / Beneficio Mínimo 1:2 estricto.**
+4. **Notificaciones Interactivas en Telegram:**
+   * Bot: `@LaraMayaBot` | Chat ID: `8887098910`
+   * Desglose completo: **Precio unitario**, **Inversión Total ($)**, Pérdida máxima ($) y Ganancia estimada ($).
+   * Botones en vivo: `[✅ Ejecutar Orden]` y `[❌ Descartar]`.
+5. **Panel de Control Web Moderno:**
+   * Corre localmente en `http://localhost:8050` con gráficos de TradingView en vivo, métricas de cuenta y control en 1 clic.
 
 ---
 
-## Docker
+## 🖥️ Instalación y Uso en Esta PC (1 Clic)
 
-A minimal Docker image is provided. To build and run:
+1. En tu Escritorio encontrarás el acceso directo **`AlgortimTrading Robot`**.
+2. Haz doble clic sobre él.
+3. Se iniciará el motor y se abrirá automáticamente tu navegador Google Chrome en `http://localhost:8050`.
+
+---
+
+## 🚀 Cómo Instalarlo en Otra PC para Operar 24/7
+
+Si tienes otra computadora o servidor que permanecerá encendido las 24 horas del día, sigue estos sencillos pasos:
+
+### Paso 1: Clonar o Descargar el Repositorio
+En la nueva PC, abre PowerShell o CMD y clona el repositorio privado:
 ```bash
-# Build the image
-docker build -t tradingpulse .
-
-# Run the container (the mock server is started automatically as a daemon in the background)
-docker run --rm tradingpulse
+git clone https://github.com/armandog451-web/AlgortimTrading-robot.git
+cd AlgortimTrading-robot
 ```
-The container executes `backend/run_test_engine.py` by default.
+*(O simplemente copia toda la carpeta del proyecto mediante una memoria USB o disco en la nueva PC).*
+
+### Paso 2: Ejecutar el Instalador Automático
+Haz doble clic en:
+👉 **`INSTALADOR_OTRA_PC.bat`**
+
+Este script hará todo por ti:
+* Comprueba que tengas Python 3.11 instalado.
+* Instala automáticamente todas las dependencias (`requirements.txt`).
+* Crea tu archivo de configuración `.env`.
+* Genera el acceso directo en el Escritorio de la nueva PC.
+
+### Paso 3: Configurar el Arranque Automático con Windows (Opcional pero Recomendado para 24/7)
+Para que no tengas que preocuparte si la PC se reinicia o se corta la luz:
+1. Haz doble clic en **`INSTALAR_ARRANQUE_CON_WINDOWS.bat`**.
+2. Listo. Cada vez que Windows encienda o se reinicie tras actualizaciones, el robot arrancará solo en segundo plano con el vigilante auto-reinicio (**`INICIAR_24_7_AUTOMATICO.bat`**).
+
+### Paso 4: Asegurar Moomoo OpenD en la Otra PC
+* Instala e inicia sesión en **moomoo OpenD** en la otra PC.
+* Asegúrate de que el puerto `11111` esté escuchando (puerto predeterminado de OpenD).
 
 ---
 
-## Configuration
+## ⚙️ Configuración (.env)
 
-All configurable values are defined in `backend/app/config.py` and can be overridden via the `.env` file:
-
-| Variable | Description |
-|---|---|
-| `MOOMOO_HOST` / `MOOMOO_PORT` | Host/port of the mock OpenD server (default `127.0.0.1:11111`). |
-| `OPEN_MINUTES` | Length of the opening‑range window (default **1** minute). |
-| `VOLUME_MULTIPLIER` | Volume multiplier used by the ORB strategy. |
-| `RISK_PER_TRADE_PCT` | Percentage of capital risked per trade (default **1%**). |
-| `MAX_DAILY_LOSS_PCT` | Maximum daily draw‑down as a percent of capital (default **2%**). |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Telegram credentials for notifications. |
-| `DATABASE_URL` | SQLite DB path (default points to `backend/trade_engine.db`). |
-
----
-
-## Extending the Demo
-
-- **Real broker integration** – replace `MoomooBroker` with a concrete broker wrapper (Alpaca, Interactive Brokers, etc.).
-- **Additional strategies** – implement new strategy classes in `backend/app/strategies/` and register them in `ExecutionEngine`. 
-- **Metrics** – uncomment the optional Prometheus metrics in `run_test_engine.py` to expose `/metrics` on port 8001.
+```ini
+BROKER=moomoo
+MOOMOO_HOST=127.0.0.1
+MOOMOO_PORT=11111
+TELEGRAM_BOT_TOKEN=8885408454:AAHJB3V7lM0foQX65sAzqvn-W6ydKKj6Jbk
+TELEGRAM_CHAT_ID=8887098910
+DEMO_CAPITAL=100000.0
+RISK_MAX_EXPOSURE=0.02
+MIN_RR_RATIO=2.0
+MAX_DAILY_LOSS_PCT=2.5
+```
 
 ---
 
-## License
+## 📁 Estructura del Proyecto
 
-This demo code is provided for educational purposes and is not intended for production trading without thorough testing and risk assessment.
+```
+AlgortimTrading-robot/
+├── start.bat                         # Lanzador en 1 clic
+├── start.ps1                         # Script unificado de inicio + apertura en Chrome
+├── INICIAR_24_7_AUTOMATICO.bat       # Vigilante con auto-reinicio continuo 24/7
+├── INSTALAR_ARRANQUE_CON_WINDOWS.bat # Registra el bot en el inicio de Windows
+├── INSTALADOR_OTRA_PC.bat            # Instalador desatendido para otra máquina
+├── create_desktop_shortcut.ps1       # Generador de accesos directos
+│
+├── server.py                         # Servidor FastAPI del panel de control
+├── engine.py                         # Motor cuantitativo de estrategias y escaneo
+├── guardian.py                       # Guardián de posiciones, break-even y square-off
+├── broker.py                         # Gestor de brokers (Moomoo OpenD & Alpaca)
+├── telegram_service.py               # Servicio asíncrono interactivo de Telegram
+├── database.py                       # Base de datos SQLite (señales, métricas, logs)
+├── config.py                         # Configuración centralizada
+│
+├── templates/
+│   └── dashboard.html                # Terminal visual estilo Bloomberg/TradingView
+├── requirements.txt                  # Librerías Python necesarias
+├── .env.example                      # Plantilla de variables de entorno
+└── README.md                         # Esta documentación
+```
+
+---
+
+*Desarrollado para Edsel Armando • AlgortimTrading Robot v2.0 PRO*

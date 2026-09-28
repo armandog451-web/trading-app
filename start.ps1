@@ -1,17 +1,12 @@
-# TradePulse - Lanzador Unificado
+# AlgortimTrading Robot v2.0 - Lanzador Unificado
 $ErrorActionPreference = "Stop"
 
 $rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$venvPy = "$rootDir\backend\.venv\Scripts\python.exe"
-$pyDir = "C:\Users\edsel\AppData\Local\Programs\Python\Python311"
-$pyScripts = "C:\Users\edsel\AppData\Local\Programs\Python\Python311\Scripts"
-$nodeDir = "C:\Program Files\nodejs"
+$py311 = "C:\Users\edsel\AppData\Local\Programs\Python\Python311\python.exe"
 
-if (Test-Path $venvPy) {
-    $pyExe = $venvPy
-} elseif (Test-Path "$pyDir\python.exe") {
-    $pyExe = "$pyDir\python.exe"
-    $env:Path = "$pyDir;$pyScripts;$nodeDir;" + $env:Path
+if (Test-Path $py311) {
+    $pyExe = $py311
+    $env:Path = "C:\Users\edsel\AppData\Local\Programs\Python\Python311;C:\Users\edsel\AppData\Local\Programs\Python\Python311\Scripts;" + $env:Path
 } elseif (Get-Command python -ErrorAction SilentlyContinue) {
     $pyExe = (Get-Command python).Source
 } else {
@@ -19,20 +14,20 @@ if (Test-Path $venvPy) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " TradePulse Quantitative Day Trading Engine" -ForegroundColor Green
-Write-Host " Arquitectura Top-Down (Macro, COT, Opciones, Liquidez & R:R)" -ForegroundColor White
+Write-Host " AlgortimTrading Robot v2.0 - Entorno Cuantitativo" -ForegroundColor Green
+Write-Host " Estrategia Hibrida Intradia (Alpaca & Moomoo + Telegram)" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-Write-Host "Iniciando TradePulse Engine en http://localhost:8000..." -ForegroundColor Yellow
+Write-Host "Iniciando AlgortimTrading Robot en http://localhost:8050..." -ForegroundColor Yellow
 
 # Iniciar servidor backend unificado
-$backendProc = Start-Process -FilePath $pyExe -ArgumentList "run.py" -WorkingDirectory "$rootDir\backend" -PassThru
+$backendProc = Start-Process -FilePath $pyExe -ArgumentList "server.py" -WorkingDirectory $rootDir -PassThru
 
-# Esperar 2 segundos a que el servidor inicialice
-Start-Sleep -Seconds 2
+# Esperar 2.5 segundos para arranque del servidor
+Start-Sleep -Seconds 2.5
 
 # Abrir exclusivamente en Google Chrome
-Write-Host "Abriendo panel de control en Google Chrome..." -ForegroundColor Green
+Write-Host "Abriendo terminal de control en Google Chrome..." -ForegroundColor Green
 $chromePaths = @(
     "C:\Program Files\Google\Chrome\Application\chrome.exe",
     "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
@@ -47,19 +42,18 @@ foreach ($cp in $chromePaths) {
 }
 
 if ($chromeExe) {
-    Start-Process -FilePath $chromeExe -ArgumentList "http://localhost:8000"
+    Start-Process -FilePath $chromeExe -ArgumentList "http://localhost:8050"
 } else {
-    Start-Process "http://localhost:8000"
+    Start-Process "http://localhost:8050"
 }
 
 Write-Host ""
 Write-Host ">> APLICACION ACTIVA Y FUNCIONANDO <<" -ForegroundColor Green
-Write-Host "URL Dashboard: http://localhost:8000" -ForegroundColor Cyan
-Write-Host "Documentacion API: http://localhost:8000/docs" -ForegroundColor Cyan
+Write-Host "URL Dashboard: http://localhost:8050" -ForegroundColor Cyan
+Write-Host "Telegram Bot: @LaraMayaBot (Sincronizado)" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Para detener el servidor de trading, presiona Ctrl+C o cierra esta ventana." -ForegroundColor Gray
+Write-Host "Para detener el robot, presiona Ctrl+C o cierra esta ventana." -ForegroundColor Gray
 
-# Mantener el proceso activo hasta que el usuario cierre la ventana o presione Ctrl+C
 try {
     Wait-Process -Id $backendProc.Id
 } catch {
