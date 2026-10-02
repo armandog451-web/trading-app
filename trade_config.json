@@ -1,0 +1,26 @@
+{
+  "updated_at": "2026-10-02T15:38:28.402772",
+  "app_name": "TradePulse Quantitative Intraday Engine",
+  "risk": {
+    "max_daily_loss_pct": 2.0,
+    "risk_per_trade_pct": 1.0,
+    "min_rr_ratio": 2.0,
+    "auto_square_off_time": "15:50",
+    "max_open_positions": 3,
+    "max_option_cost_per_contract": 200.0
+  },
+  "broker": {
+    "active_broker": "MOOMOO",
+    "auto_execute_trades": false,
+    "alpaca_paper": true,
+    "moomoo_host": "127.0.0.1",
+    "moomoo_port": 11111,
+    "moomoo_paper": true,
+    "moomoo_acc_id": 0
+  },
+  "notifications": {
+    "telegram_active": false,
+    "telegram_chat_id": "",
+    "notify_market_close": false
+  }
+}

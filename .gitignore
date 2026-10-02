@@ -1,13 +1,42 @@
 # .gitignore
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
 env/
+venv/
 .venv/
-.env
+ENV/
 *.env
-*.log
+
+# SQLite & Databases
 *.sqlite3
 *.db
-yt-dlp.exe
+*.db-journal
+*.db-wal
+*.db-shm
+trade_engine.db
+trading_robot.db
+
+# Logs
+*.log
+
+# Node & Frontend
 node_modules/
-.ipynb_checkpoints/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE & OS
+.idea/
+.vscode/
+.agy/
+.DS_Store
+Thumbs.db
+
+# Secrets & Temporary fetch scripts
+fetch_repo.ps1
+*token*
+*.token

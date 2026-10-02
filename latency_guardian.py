@@ -7,7 +7,7 @@ import asyncio
 import logging
 import httpx
 from datetime import datetime
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, MOOMOO_PORT, BROKER
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, MOOMOO_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +36,14 @@ class LatencyGuardian:
         """Mide latencias y aplica ajustes automáticos si superan el límite."""
         port = opend_port or MOOMOO_PORT
 
-        # 1. Medir latencia HTTP con Alpaca si es el broker activo
-        alpaca_latency = 0.0
-        if BROKER.lower() == "alpaca":
-            start_time = time.time()
-            try:
-                import requests
-                requests.get(alpaca_url, timeout=2)
-                alpaca_latency = (time.time() - start_time) * 1000
-            except Exception:
-                alpaca_latency = 999.0
+        # 1. Medir latencia HTTP con Alpaca
+        start_time = time.time()
+        try:
+            import requests
+            requests.get(alpaca_url, timeout=2)
+            alpaca_latency = (time.time() - start_time) * 1000
+        except Exception:
+            alpaca_latency = 999.0
 
         # 2. Medir latencia de socket local con Moomoo OpenD
         start_time = time.time()
@@ -57,13 +55,12 @@ class LatencyGuardian:
         except Exception:
             opend_latency = 999.0
 
-        active_latency = opend_latency if BROKER.lower() == "moomoo" else alpaca_latency
-        logger.info(f"Latencia ({BROKER.upper()}) -> OpenD: {opend_latency:.2f}ms | Alpaca: {alpaca_latency:.2f}ms")
+        logger.info(f"Latencia actual -> Alpaca: {alpaca_latency:.2f}ms | OpenD ({port}): {opend_latency:.2f}ms")
 
         optimal = True
-        # 3. Evaluación y Auto-Ajuste sobre broker activo
-        if active_latency > self.max_latency_ms:
-            logger.warning(f"Umbral de latencia superado para {BROKER.upper()} ({active_latency:.2f}ms > {self.max_latency_ms}ms).")
+        # 3. Evaluación y Auto-Ajuste
+        if alpaca_latency > self.max_latency_ms or opend_latency > self.max_latency_ms:
+            logger.warning(f"Umbral superado (> {self.max_latency_ms}ms). Aplicando auto-ajustes de red...")
             self._trigger_emergency_optimizations()
             optimal = False
         else:

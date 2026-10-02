@@ -1,37 +1,17 @@
 import asyncio
 import logging
 import random
-from datetime import datetime, time
-import pytz
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from config import WATCHLIST, RISK_MAX_EXPOSURE, MIN_RR_RATIO, DEMO_CAPITAL, BROKER, ENFORCE_ENTRY_WINDOW, MARKET_TIMEZONE
+from config import WATCHLIST, RISK_MAX_EXPOSURE, MIN_RR_RATIO, DEMO_CAPITAL, BROKER
 from database import get_connection, log_event
 from broker import broker_manager
 from telegram_service import telegram_service
 
 logger = logging.getLogger(__name__)
-
-def is_market_in_entry_window(check_weekend: bool = True) -> bool:
-    tz = pytz.timezone('US/Eastern')
-    now_dt = datetime.now(tz)
-    now = now_dt.time()
-    
-    # Proteger fines de semana si está habilitado
-    if check_weekend and now_dt.weekday() >= 5:
-        return False
-    
-    # Ventana matutina principal (9:45 AM a 11:15 AM)
-    morning_open = time(9, 45)
-    morning_close = time(11, 15)
-    
-    # Ventana vespertina opcional (2:00 PM a 3:30 PM)
-    afternoon_open = time(14, 0)
-    afternoon_close = time(15, 30)
-    
-    return (morning_open <= now <= morning_close) or (afternoon_open <= now <= afternoon_close)
 
 class StrategyEngine:
     def __init__(self):
@@ -40,11 +20,6 @@ class StrategyEngine:
         self.scan_interval = 25  # segundos entre escaneos en modo activo
         self.last_scan_time = None
         self.active_signals_count = 0
-        self.current_session = "Standby"
-        self.in_entry_window = False
-
-    def is_in_entry_window(self) -> bool:
-        return is_market_in_entry_window()
 
     def start(self):
         if not self.is_running:
@@ -73,50 +48,36 @@ class StrategyEngine:
                 logger.error(f"Error en bucle de escaneo: {e}")
                 await asyncio.sleep(10)
 
-    async def scan_market(self, force: bool = False):
+    async def scan_market(self):
         """Descarga datos recientes y evalúa las 4 estrategias híbridas en los símbolos con filtro de sesión."""
+        import pytz
+        from config import MARKET_TIMEZONE
         ny_tz = pytz.timezone(MARKET_TIMEZONE)
         now_ny = datetime.now(ny_tz)
-        now_time = now_ny.time()
+        time_str = now_ny.strftime("%H:%M")
         self.last_scan_time = now_ny.strftime("%H:%M:%S EST")
 
-        in_window = is_market_in_entry_window()
-        self.in_entry_window = in_window
-
-        # Identificación de la fase de la sesión
-        morning_open = time(9, 45)
-        morning_close = time(11, 15)
-        afternoon_open = time(14, 0)
-        afternoon_close = time(15, 30)
-
-        if morning_open <= now_time <= morning_close:
-            self.current_session = "Ventana Matutina (9:45 - 11:15 EST - Tendencia Óptima)"
-            min_score = 68.0
-        elif afternoon_open <= now_time <= afternoon_close:
-            self.current_session = "Ventana Vespertina (14:00 - 15:30 EST - Power Window)"
-            min_score = 70.0
-        elif time(9, 30) <= now_time < morning_open:
-            self.current_session = "Apertura Wall St (9:30 - 9:45 EST - Esperando Ventana)"
-            min_score = 85.0
-        elif morning_close < now_time < afternoon_open:
-            self.current_session = "Almuerzo Wall St (11:15 - 14:00 EST - Filtro Chop)"
+        # Filtro de Sesión Institucional Wall Street
+        if "09:30" <= time_str < "10:00":
+            self.current_session = "Apertura (Opening Range - Alta Volatilidad)"
             min_score = 80.0
-        elif afternoon_close < now_time < time(15, 55):
-            self.current_session = "Pre-Cierre (15:30 - 15:55 EST - Fuera de Ventana)"
-            min_score = 85.0
-        elif time(15, 55) <= now_time < time(16, 0):
+        elif "10:00" <= time_str < "11:30":
+            self.current_session = "Ventana Dorada (Golden Window - Tendencia Óptima)"
+            min_score = 68.0
+        elif "11:30" <= time_str < "14:00":
+            self.current_session = "Almuerzo Wall Street (Bajo Volumen / Filtro Chop)"
+            min_score = 78.0
+        elif "14:00" <= time_str < "15:50":
+            self.current_session = "Power Hour Institucional"
+            min_score = 70.0
+        elif time_str >= "15:50" and time_str < "16:00":
             self.current_session = "Cierre de Mercado (Auto-Square Off Activo)"
-            return  # Liquidación obligatoria, no abrir nuevas posiciones
+            return  # No se abren nuevas posiciones justo antes del cierre
         else:
-            self.current_session = "Fuera de Horario Regular (Standby / 24/7)"
+            self.current_session = "Modo Demo Extendido (24/7)"
             min_score = 68.0
 
-        logger.info(f"Escaneando [{self.current_session}] | Ventana Entrada: {'ABIERTA' if in_window else 'CERRADA'} a las {self.last_scan_time}...")
-
-        # Filtro estricto de entrada institucional: Solo abrir trades en la ventana
-        if ENFORCE_ENTRY_WINDOW and not in_window and not force:
-            logger.info(f"Filtro de Horario: Fuera de ventana de entrada (9:45-11:15 o 14:00-15:30 EST). Monitoreo en espera.")
-            return
+        logger.info(f"Escaneando [{self.current_session}] a las {self.last_scan_time}...")
 
         # Obtener pesos actuales de las estrategias de la base de datos
         conn = get_connection()
@@ -258,28 +219,15 @@ class StrategyEngine:
                 stop_loss = round(current_price + risk_dist, 2)
                 take_profit = round(current_price - reward_dist, 2)
 
-            # Evaluación de Salud Backtest (Walk-Forward Integrity Check)
-            from backtest_validator import backtest_validator
-            val_health = backtest_validator.evaluate_health()
-            if val_health.get("action") == "PAUSE_TRADING":
-                logger.critical(f"BacktestValidator: Nueva orden rechazada. {val_health.get('reason')}")
-                log_event("ERROR", f"BacktestValidator Circuit Breaker: {val_health.get('reason')}")
-                return
-
-            # Cálculo de tamaño de posición (Position Sizing) con multiplicador dinámico
+            # Cálculo de tamaño de posición (Position Sizing)
             account = broker_manager.get_account_summary()
             capital = account["cash"]
             risk_amount = capital * RISK_MAX_EXPOSURE
-            base_qty = max(1, int(risk_amount / (abs(current_price - stop_loss) + 1e-4)))
-            
+            shares_qty = max(1, int(risk_amount / (abs(current_price - stop_loss) + 1e-4)))
             # Limitar tamaño máximo para diversificación
             max_capital_allocation = capital * 0.15
-            if (base_qty * current_price) > max_capital_allocation:
-                base_qty = max(1, int(max_capital_allocation / current_price))
-
-            # Aplicar multiplicador del BacktestValidator (1.0x saludable, 0.5x degradado)
-            size_mult = val_health.get("size_multiplier", 1.0)
-            shares_qty = max(1, int(base_qty * size_mult))
+            if (shares_qty * current_price) > max_capital_allocation:
+                shares_qty = max(1, int(max_capital_allocation / current_price))
 
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 

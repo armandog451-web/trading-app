@@ -180,8 +180,8 @@ export default function SettingsModal({ isOpen, onClose }) {
 
       await updateTelegramSettings(telegramToken, telegramChatId, notifyMarketClose);
 
-      setSavedMsg(`Configuraciones guardadas. Broker: ${activeBroker} | Modo: ${autoExecuteTrades ? 'Ejecución Automática' : 'Solo Notificaciones'}`);
-      setTimeout(() => setSavedMsg(''), 3500);
+      setSavedMsg(`✓ Configuraciones guardadas y sincronizadas automáticamente con GitHub. Broker: ${activeBroker} | Modo: ${autoExecuteTrades ? 'Ejecución Automática' : 'Solo Notificaciones'}`);
+      setTimeout(() => setSavedMsg(''), 4500);
     } catch (err) {
       console.error(err);
     }

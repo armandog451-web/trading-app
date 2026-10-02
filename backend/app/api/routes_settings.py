@@ -6,6 +6,7 @@ from app.core.alpaca_client import alpaca_broker
 from app.core.moomoo_client import moomoo_broker
 from app.core.notifier import notifier
 from app.core.settings_manager import settings_manager
+from app.core.github_sync import auto_sync_manager, perform_git_sync
 
 router = APIRouter(prefix="/api/settings", tags=["Configuraciones"])
 
@@ -67,7 +68,12 @@ def update_risk_settings(cfg: RiskConfigUpdate):
         "MAX_OPTION_COST_PER_CONTRACT": getattr(settings, "MAX_OPTION_COST_PER_CONTRACT", 200.0)
     })
 
-    return {"success": True, "message": "Parámetros de riesgo guardados permanentemente"}
+    # Auto-sincronizar cambios a GitHub en segundo plano
+    auto_sync_manager.trigger_sync(
+        f"Ajuste de Riesgo (MaxLoss {cfg.max_daily_loss_pct}%, Risk {cfg.risk_per_trade_pct}%)"
+    )
+
+    return {"success": True, "message": "Parámetros de riesgo guardados permanentemente y auto-sincronizados con GitHub"}
 
 @router.post("/broker")
 def update_broker_settings(cfg: BrokerConfigUpdate):
@@ -119,9 +125,14 @@ def update_broker_settings(cfg: BrokerConfigUpdate):
 
     settings_manager.save_settings_dict(save_map)
 
+    # Auto-sincronizar cambios a GitHub en segundo plano
+    auto_sync_manager.trigger_sync(
+        f"Ajuste de Broker ({settings.ACTIVE_BROKER}, AutoTrade: {settings.AUTO_EXECUTE_TRADES})"
+    )
+
     return {
         "success": True,
-        "message": f"Broker activo guardado permanentemente: {settings.ACTIVE_BROKER}."
+        "message": f"Broker activo guardado permanentemente: {settings.ACTIVE_BROKER} y auto-sincronizado con GitHub."
     }
 
 @router.post("/test-broker")
@@ -152,6 +163,7 @@ async def test_moomoo_credentials(cfg: TestMoomooRequest):
             "MOOMOO_PAPER": cfg.moomoo_paper,
             "MOOMOO_ACC_ID": cfg.moomoo_acc_id
         })
+        auto_sync_manager.trigger_sync("Credenciales verificadas de Moomoo OpenD")
     return res
 
 @router.post("/telegram")
@@ -167,58 +179,17 @@ def update_telegram_settings(cfg: TelegramConfigUpdate):
         save_dict["NOTIFY_MARKET_CLOSE"] = cfg.notify_market_close
 
     settings_manager.save_settings_dict(save_dict)
-    return {"success": True, "message": "Credenciales y preferencias de Telegram guardadas permanentemente"}
 
+    # Auto-sincronizar cambios a GitHub en segundo plano
+    auto_sync_manager.trigger_sync("Preferencias y alertas de Telegram")
+
+    return {"success": True, "message": "Credenciales y preferencias de Telegram guardadas permanentemente y auto-sincronizadas con GitHub"}
 
 @router.post("/sync-github")
 async def sync_github():
     """
     Sincroniza y sube todos los cambios locales al repositorio GitHub configurado.
     """
-    import subprocess
-    import os
-    import datetime
-
-    repo_dir = settings.BASE_DIR
-    git_cmd = os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe")
-    if not os.path.exists(git_cmd):
-        git_cmd = "git"
-
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "never"}
-
-    try:
-        # git add .
-        subprocess.run([git_cmd, "add", "."], cwd=repo_dir, capture_output=True, text=True, check=True)
-        # git commit
-        commit_res = subprocess.run([git_cmd, "commit", "-m", f"Auto-sync TradePulse: {now_str}"], cwd=repo_dir, capture_output=True, text=True)
-        # git push
-        push_res = subprocess.run([git_cmd, "push", "origin", "main"], cwd=repo_dir, capture_output=True, text=True, timeout=10, env=env)
-
-        if push_res.returncode == 0:
-            return {
-                "success": True,
-                "message": f"¡Sincronización exitosa con GitHub! [{now_str}]",
-                "detail": push_res.stdout or commit_res.stdout
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Aviso: Git requiere autorización en GitHub. Haz doble clic en 'Sincronizar con GitHub' en tu Escritorio para iniciar sesión una sola vez.",
-                "detail": push_res.stderr or push_res.stdout
-            }
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "message": "Git Credential Manager está esperando autorización. Haz doble clic en 'Sincronizar con GitHub' en el escritorio para iniciar sesión.",
-            "detail": "Git push timed out"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error ejecutando sincronización: {str(e)}",
-            "detail": str(e)
-        }
+    return perform_git_sync(reason="Sincronización manual desde panel de control")
 
 

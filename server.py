@@ -16,7 +16,6 @@ from telegram_service import telegram_service
 from engine import strategy_engine
 from guardian import guardian
 from latency_guardian import latency_guardian
-from backtest_validator import backtest_validator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,10 +50,7 @@ def get_status():
         "positions": positions,
         "telegram_connected": bool(telegram_service.bot_token and telegram_service.chat_id),
         "telegram_chat_id": telegram_service.chat_id,
-        "watchlist": WATCHLIST,
-        "in_entry_window": strategy_engine.is_in_entry_window(),
-        "current_session": strategy_engine.current_session,
-        "validator": backtest_validator.evaluate_health()
+        "watchlist": WATCHLIST
     }
 
 @app.post("/api/bot/toggle")
@@ -69,7 +65,7 @@ def toggle_bot():
 
 @app.post("/api/bot/scan-now")
 async def scan_now():
-    await strategy_engine.scan_market(force=True)
+    await strategy_engine.scan_market()
     return {"success": True, "message": "Escaneo ejecutado exitosamente"}
 
 @app.get("/api/signals")
@@ -161,13 +157,8 @@ def strategy_feedback(fb: FeedbackModel):
     """, (total, wins, losses, win_rate, new_weight, now, fb.strategy_code))
     conn.commit()
     conn.close()
-
-    # Registrar en el validador de backtest para control de salud dinámico
-    backtest_validator.record_trade(1.0 if fb.is_win else -1.0)
-    health = backtest_validator.evaluate_health()
-
-    log_event("INFO", f"Auto-aprendizaje: Estrategia {row['display_name']} ajustada a peso {new_weight} (WinRate: {win_rate}%). Salud: {health['status']}.")
-    return {"success": True, "new_weight": new_weight, "win_rate": win_rate, "validator_status": health["status"]}
+    log_event("INFO", f"Auto-aprendizaje: Estrategia {row['display_name']} ajustada a peso {new_weight} (WinRate: {win_rate}%).")
+    return {"success": True, "new_weight": new_weight, "win_rate": win_rate}
 
 
 @app.post("/api/telegram/send-balance")
