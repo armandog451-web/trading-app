@@ -74,10 +74,23 @@ def health_check():
         "bot_active": bot_runner.is_running
     }
 
-# Servir Frontend Compilado en la raíz
+# Servir Frontend Compilado en la raíz con política anti-caché
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+@app.get("/")
+def serve_root():
+    index_file = dist_dir / "index.html"
+    if index_file.exists():
+        response = FileResponse(index_file)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+    return {"message": "TradePulse Engine Backend Online"}
+
 if dist_dir.exists():
     app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="static")
