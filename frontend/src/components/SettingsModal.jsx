@@ -28,6 +28,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [moomooHost, setMoomooHost] = useState('127.0.0.1');
   const [moomooPort, setMoomooPort] = useState(11111);
   const [moomooTradePwd, setMoomooTradePwd] = useState('');
+  const [showMoomooPwd, setShowMoomooPwd] = useState(false);
   const [moomooPaper, setMoomooPaper] = useState(true);
   const [moomooAccId, setMoomooAccId] = useState(0);
   const [testingMoomoo, setTestingMoomoo] = useState(false);
@@ -44,6 +45,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   // Telegram state
   const [telegramToken, setTelegramToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
+  const [showTelegramToken, setShowTelegramToken] = useState(false);
+  const [showTelegramChatId, setShowTelegramChatId] = useState(false);
   const [notifyMarketClose, setNotifyMarketClose] = useState(false);
   const [testingTg, setTestingTg] = useState(false);
   const [tgFeedback, setTgFeedback] = useState(null);
@@ -71,6 +74,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             if (cfg.broker.alpaca_secret_key) setSecretKey(cfg.broker.alpaca_secret_key);
             if (cfg.broker.moomoo_host) setMoomooHost(cfg.broker.moomoo_host);
             if (cfg.broker.moomoo_port) setMoomooPort(cfg.broker.moomoo_port);
+            if (cfg.broker.moomoo_trade_pwd) setMoomooTradePwd(cfg.broker.moomoo_trade_pwd);
             if (cfg.broker.moomoo_paper !== undefined) setMoomooPaper(cfg.broker.moomoo_paper);
             if (cfg.broker.moomoo_acc_id !== undefined) setMoomooAccId(cfg.broker.moomoo_acc_id);
           }
@@ -548,14 +552,34 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Contraseña de Trading (Unlock Password)</label>
-                  <input
-                    type="password"
-                    value={moomooTradePwd}
-                    onChange={e => setMoomooTradePwd(e.target.value)}
-                    placeholder="Contraseña de 6 dígitos de Moomoo"
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] text-slate-300">Contraseña de Trading (Unlock Password)</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowMoomooPwd(!showMoomooPwd)}
+                      className="text-[11px] text-slate-400 hover:text-amber-400 flex items-center gap-1 transition cursor-pointer"
+                      title={showMoomooPwd ? "Ocultar Contraseña" : "Mostrar Contraseña"}
+                    >
+                      {showMoomooPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showMoomooPwd ? 'Ocultar' : 'Mostrar'}</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showMoomooPwd ? "text" : "password"}
+                      value={moomooTradePwd}
+                      onChange={e => setMoomooTradePwd(e.target.value)}
+                      placeholder={showMoomooPwd ? "Contraseña de 6 dígitos de Moomoo" : "••••••"}
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 pr-10 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMoomooPwd(!showMoomooPwd)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showMoomooPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-1">
@@ -613,25 +637,65 @@ export default function SettingsModal({ isOpen, onClose }) {
 
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">Telegram Bot Token</label>
-                <input
-                  type="password"
-                  value={telegramToken}
-                  onChange={e => setTelegramToken(e.target.value)}
-                  placeholder="Ej: 7123456789:AAHk..._zyx"
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-slate-300">Telegram Bot Token</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramToken(!showTelegramToken)}
+                    className="text-[11px] text-slate-400 hover:text-purple-400 flex items-center gap-1 transition cursor-pointer"
+                    title={showTelegramToken ? "Ocultar Bot Token" : "Mostrar Bot Token"}
+                  >
+                    {showTelegramToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showTelegramToken ? 'Ocultar' : 'Mostrar'}</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showTelegramToken ? "text" : "password"}
+                    value={telegramToken}
+                    onChange={e => setTelegramToken(e.target.value)}
+                    placeholder={showTelegramToken ? "Ej: 7123456789:AAHk..._zyx" : "••••••••••••••••••••••••••••••••••••••••••••"}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 pr-10 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramToken(!showTelegramToken)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">Telegram Chat ID</label>
-                <input
-                  type="text"
-                  value={telegramChatId}
-                  onChange={e => setTelegramChatId(e.target.value)}
-                  placeholder="Ej: 123456789"
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-slate-300">Telegram Chat ID</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramChatId(!showTelegramChatId)}
+                    className="text-[11px] text-slate-400 hover:text-purple-400 flex items-center gap-1 transition cursor-pointer"
+                    title={showTelegramChatId ? "Ocultar Chat ID" : "Mostrar Chat ID"}
+                  >
+                    {showTelegramChatId ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showTelegramChatId ? 'Ocultar' : 'Mostrar'}</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showTelegramChatId ? "text" : "password"}
+                    value={telegramChatId}
+                    onChange={e => setTelegramChatId(e.target.value)}
+                    placeholder={showTelegramChatId ? "Ej: 123456789" : "••••••••••"}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 pr-10 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramChatId(!showTelegramChatId)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    {showTelegramChatId ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900 border border-slate-700/60">
