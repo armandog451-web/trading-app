@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-10-02T16:07:02.430768",
+  "updated_at": "2026-10-02T16:38:52.515917",
   "app_name": "TradePulse Quantitative Intraday Engine",
   "risk": {
-    "max_daily_loss_pct": 2.5,
-    "risk_per_trade_pct": 1.2,
+    "max_daily_loss_pct": 2.0,
+    "risk_per_trade_pct": 1.0,
     "min_rr_ratio": 2.0,
     "auto_square_off_time": "15:50",
     "max_open_positions": 3,
