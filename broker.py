@@ -92,15 +92,17 @@ class BrokerManager:
                 if ret == 0 and not pos.empty:
                     res = []
                     for _, p in pos.iterrows():
-                        res.append({
-                            "symbol": p["code"].replace("US.", ""),
-                            "qty": int(p["qty"]),
-                            "side": "BUY" if p["qty"] > 0 else "SELL",
-                            "avg_entry_price": float(p["cost_price"]),
-                            "current_price": float(p["nominal_price"]),
-                            "unrealized_pl": float(p["pl_val"]),
-                            "unrealized_plpc": float(p["pl_ratio"]) * 100
-                        })
+                        qty = int(p["qty"])
+                        if qty != 0:
+                            res.append({
+                                "symbol": p["code"].replace("US.", ""),
+                                "qty": abs(qty),
+                                "side": "BUY" if qty > 0 else "SELL",
+                                "avg_entry_price": float(p["cost_price"]),
+                                "current_price": float(p["nominal_price"]),
+                                "unrealized_pl": float(p["pl_val"]),
+                                "unrealized_plpc": float(p["pl_ratio"]) * 100
+                            })
                     return res
             except Exception as e:
                 logger.warning(f"Error obteniendo posiciones Moomoo: {e}")
@@ -111,14 +113,14 @@ class BrokerManager:
                 return [
                     {
                         "symbol": p.symbol,
-                        "qty": int(p.qty),
+                        "qty": abs(int(p.qty)),
                         "side": p.side,
                         "avg_entry_price": float(p.avg_entry_price),
                         "current_price": float(p.current_price),
                         "unrealized_pl": float(p.unrealized_pl),
                         "unrealized_plpc": float(p.unrealized_plpc) * 100
                     }
-                    for p in positions
+                    for p in positions if int(p.qty) != 0
                 ]
             except Exception:
                 pass

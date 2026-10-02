@@ -35,10 +35,11 @@ MIN_RR_RATIO = float(os.getenv("MIN_RR_RATIO", "2.0"))             # R:R minimo 
 MAX_DAILY_LOSS_PCT = float(os.getenv("MAX_DAILY_LOSS_PCT", "2.5")) # Freno de emergencia diario -2.5%
 AUTO_BREAK_EVEN = True                                             # Protección a +1R riesgo cero
 AUTO_SQUARE_OFF_TIME = "15:55"                                     # Cierre obligatorio intradía EST
+ENFORCE_ENTRY_WINDOW = os.getenv("ENFORCE_ENTRY_WINDOW", "true").lower() in ("true", "1", "yes")
 MARKET_TIMEZONE = "America/New_York"
 
-# Universe: Alta liquidez y Beta institucional
-WATCHLIST = ["QQQ", "SPY", "NVDA", "TSLA", "AMD", "AAPL", "MSFT"]
+# Universe: Alta liquidez y Beta institucional (<= $300 por unidad)
+WATCHLIST = ["AMD", "PLTR", "SOXL"]
 
 # Database
 DB_PATH = BASE_DIR / "trading_robot.db"

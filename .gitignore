@@ -2,7 +2,12 @@
 __pycache__/
 *.pyc
 env/
+.venv/
+.env
 *.env
 *.log
 *.sqlite3
+*.db
+yt-dlp.exe
+node_modules/
 .ipynb_checkpoints/

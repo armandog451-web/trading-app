@@ -8,7 +8,7 @@ from config import (
     MAX_DAILY_LOSS_PCT, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
     DEMO_CAPITAL
 )
-from database import get_connection, log_event
+from database import get_connection, log_event, get_setting, set_setting
 from broker import broker_manager
 import httpx
 
@@ -78,7 +78,7 @@ class PositionGuardian:
         current_time_str = now_ny.strftime("%H:%M")
         today_str = now_ny.strftime("%Y-%m-%d")
 
-        # Reset diario del flag de square-off
+        # Reset diario del flag de square-off en memoria al cambiar de dia
         if self._last_square_off_date != today_str:
             self.square_off_executed_today = False
             self.daily_loss_tripped = False
@@ -90,40 +90,49 @@ class PositionGuardian:
             except Exception:
                 pass
 
+        # Verificación persistente en base de datos: Solo 1 notificación de cierre por día
+        last_notif_date = get_setting("last_square_off_notif_date", "")
+        square_off_done_today = (last_notif_date == today_str)
+
         # =============================================
-        # FIX #3: AUTO-CIERRE INTRADIA REFORZADO
+        # FIX #3: AUTO-CIERRE INTRADIA (UNA SOLA NOTIFICACIÓN DIARIA)
         # Barrido forzoso entre 15:55 y 16:05 EST
         # =============================================
         if SQUARE_OFF_START <= current_time_str <= SQUARE_OFF_HARD_DEADLINE:
-            if not self.square_off_executed_today:
+            if not square_off_done_today:
                 positions = broker_manager.get_positions()
                 if positions:
-                    logger.warning(f"CAMPANA DE CIERRE {current_time_str} EST: Ejecutando barrido forzoso...")
+                    logger.warning(f"CAMPANA DE CIERRE {current_time_str} EST: Ejecutando barrido forzoso de {len(positions)} posiciones...")
                     results = broker_manager.close_all_positions()
-                    closed_count = sum(1 for r in results if r["result"].get("success"))
-                    self.square_off_executed_today = True
+                    closed_count = sum(1 for r in results if r.get("result", {}).get("success"))
+                    symbols_closed = ", ".join([r["symbol"] for r in results])
+                    
+                    # Registrar de inmediato en base de datos persistente para evitar duplicados
+                    set_setting("last_square_off_notif_date", today_str)
                     self._last_square_off_date = today_str
+                    self.square_off_executed_today = True
+
                     log_event("WARNING", f"Auto-cierre intradia: {closed_count}/{len(positions)} posiciones cerradas.")
 
-                    symbols_closed = ", ".join([r["symbol"] for r in results])
-                    await self._send_alert(
-                        f"🔔 *AUTO-CIERRE INTRADÍA ({current_time_str} EST)*\n\n"
-                        f"Se ejecutó barrido forzoso de todas las posiciones.\n"
-                        f"📊 *Cerradas:* `{closed_count}/{len(positions)}`\n"
-                        f"📋 *Símbolos:* `{symbols_closed}`\n\n"
-                        f"Capital protegido para la sesión de mañana."
-                    )
+                    acc = broker_manager.get_account_summary()
+                    current_equity = acc.get("equity", DEMO_CAPITAL)
 
-                    # Verificacion post-cierre (retry si quedan huerfanas)
-                    await asyncio.sleep(3)
-                    remaining = broker_manager.get_positions()
-                    if remaining:
-                        logger.warning(f"RETRY: {len(remaining)} posiciones huerfanas detectadas post-cierre.")
-                        broker_manager.close_all_positions()
-                        log_event("WARNING", f"Retry de cierre: {len(remaining)} posiciones huerfanas liquidadas.")
+                    # Enviar UNA SOLA notificación consolidada
+                    await self._send_alert(
+                        f"🔔 *CIERRE DE OPERACIONES INTRADÍA ({current_time_str} EST)*\n"
+                        f"───────────────────────────────\n"
+                        f"📊 *Posiciones Cerradas:* `{closed_count}/{len(positions)}`\n"
+                        f"📋 *Activos Liquidados:* `{symbols_closed}`\n"
+                        f"💰 *Balance Portafolio:* `${current_equity:,.2f}`\n"
+                        f"🛡️ *Protección:* Cero riesgo nocturno. Sesión finalizada.\n"
+                        f"───────────────────────────────"
+                    )
                 else:
-                    self.square_off_executed_today = True
+                    # Sin posiciones abiertas activas: marcar fecha para evitar chequeos repetidos
+                    set_setting("last_square_off_notif_date", today_str)
                     self._last_square_off_date = today_str
+                    self.square_off_executed_today = True
+                    log_event("INFO", f"Campana de cierre {current_time_str} EST: Sin posiciones abiertas activas.")
 
         # =============================================
         # FIX #2: CIRCUIT BREAKER ESTRICTO
