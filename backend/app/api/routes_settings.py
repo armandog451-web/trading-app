@@ -26,10 +26,12 @@ def get_current_settings():
             "auto_execute_trades": settings.AUTO_EXECUTE_TRADES,
             "has_alpaca_key": bool(settings.ALPACA_API_KEY),
             "alpaca_api_key": settings.ALPACA_API_KEY,
+            "alpaca_secret_key": settings.ALPACA_SECRET_KEY,
             "alpaca_paper": settings.ALPACA_PAPER,
             "base_url": settings.ALPACA_BASE_URL,
             "moomoo_host": settings.MOOMOO_HOST,
             "moomoo_port": settings.MOOMOO_PORT,
+            "moomoo_trade_pwd": settings.MOOMOO_TRADE_PWD,
             "moomoo_paper": settings.MOOMOO_PAPER,
             "moomoo_acc_id": settings.MOOMOO_ACC_ID,
             "has_moomoo_pwd": bool(settings.MOOMOO_TRADE_PWD)

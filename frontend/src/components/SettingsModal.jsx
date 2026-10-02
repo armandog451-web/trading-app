@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Shield, Bell, Save, CheckCircle, Send, AlertCircle, ExternalLink, Server, Cpu } from 'lucide-react';
+import { X, Key, Shield, Bell, Save, CheckCircle, Send, AlertCircle, ExternalLink, Server, Cpu, Eye, EyeOff } from 'lucide-react';
 import {
   fetchSettings,
   updateRiskSettings,
@@ -18,6 +18,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   // Alpaca state
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
   const [isPaper, setIsPaper] = useState(true);
   const [testingBroker, setTestingBroker] = useState(false);
   const [brokerFeedback, setBrokerFeedback] = useState(null);
@@ -66,6 +68,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             if (cfg.broker.auto_execute_trades !== undefined) setAutoExecuteTrades(cfg.broker.auto_execute_trades);
             setIsPaper(cfg.broker.alpaca_paper ?? true);
             if (cfg.broker.alpaca_api_key) setApiKey(cfg.broker.alpaca_api_key);
+            if (cfg.broker.alpaca_secret_key) setSecretKey(cfg.broker.alpaca_secret_key);
             if (cfg.broker.moomoo_host) setMoomooHost(cfg.broker.moomoo_host);
             if (cfg.broker.moomoo_port) setMoomooPort(cfg.broker.moomoo_port);
             if (cfg.broker.moomoo_paper !== undefined) setMoomooPaper(cfg.broker.moomoo_paper);
@@ -395,25 +398,65 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Alpaca API Key ID</label>
-                  <input
-                    type="text"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder={isPaper ? "PK..." : "AK..."}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] text-slate-300">Alpaca API Key ID</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="text-[11px] text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition cursor-pointer"
+                      title={showApiKey ? "Ocultar API Key" : "Mostrar API Key"}
+                    >
+                      {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showApiKey ? 'Ocultar' : 'Mostrar'}</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={isPaper ? "PK..." : "AK..."}
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 pr-10 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Alpaca Secret Key</label>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={e => setSecretKey(e.target.value)}
-                    placeholder="••••••••••••••••••••••••••••"
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] text-slate-300">Alpaca Secret Key</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                      className="text-[11px] text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition cursor-pointer"
+                      title={showSecretKey ? "Ocultar Secret Key" : "Mostrar Secret Key"}
+                    >
+                      {showSecretKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showSecretKey ? 'Ocultar' : 'Mostrar'}</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showSecretKey ? "text" : "password"}
+                      value={secretKey}
+                      onChange={e => setSecretKey(e.target.value)}
+                      placeholder={showSecretKey ? "Escribe tu Secret Key..." : "••••••••••••••••••••••••••••"}
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 pr-10 text-xs font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-1">
