@@ -190,7 +190,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#0B0E14] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
       
       {/* Toast Notification Bar */}
       {toast && (
@@ -223,7 +223,7 @@ export default function App() {
       />
 
       {/* Main Workspace */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6 overflow-hidden">
         {activeTab === 'cockpit' ? (
           <>
             {/* Capas Top-Down Superiores (Macro & Sentimiento) */}
