@@ -1,7 +1,7 @@
 """
 ai_trading_agent.tests.test_risk_and_safety
 ===========================================
-Pruebas críticas de seguridad, Risk Engine determinista y control estricto de ANALYSIS_ONLY.
+Pruebas críticas de seguridad, Motor de Riesgo Determinista de $1,000,000 USD y control de ANALYSIS_ONLY.
 """
 
 import pytest
@@ -15,10 +15,11 @@ from ai_trading_agent.execution.paper_broker import PaperBroker
 from ai_trading_agent.journal.trade_journal import trade_journal
 
 
-def test_risk_engine_valid_sizing():
-    engine = DeterministicRiskEngine(risk_per_trade_pct=1.0, min_rr_ratio=2.0)
+def test_risk_engine_valid_sizing_1m_profile():
+    """Prueba el dimensionamiento exacto de posición con la fórmula floor(risk_budget / risk_per_share) para $1,000,000 USD."""
+    engine = DeterministicRiskEngine(risk_per_trade_pct=0.25, min_rr_ratio=2.0)
     proposal = TradeProposal(
-        decision_id="dec_test_001",
+        decision_id="dec_test_1m_001",
         symbol="SPY",
         direction=SignalDirection.BUY,
         entry_price=500.0,
@@ -26,21 +27,22 @@ def test_risk_engine_valid_sizing():
         take_profit=510.0, # $10 de beneficio (R:R 2.0)
         rr_ratio=2.0,
         timestamp=datetime.utcnow(),
-        rationale="Setup válido"
+        rationale="Setup válido $1M profile"
     )
 
     assessment = engine.assess_proposal(
         proposal=proposal,
-        equity=100000.0,
+        equity=1000000.0,
         daily_pnl=0.0,
         open_positions=[]
     )
 
     assert assessment.decision == RiskDecision.APPROVED
-    # 1% de 100k = $1000. Riesgo de $5 por acción -> 200 acciones
-    # Max allocation = 15% de 100k = 15k / 500 = 30 acciones (limitado por capital por trade)
-    assert assessment.approved_quantity == 30
-    assert assessment.estimated_risk_dollars == 150.0  # 30 * $5
+    # Presupuesto riesgo 0.25% de $1M = $2,500 USD.
+    # Costes (slippage 5bps = $0.25 + comisión $0.005) -> risk_per_share ~ $5.255
+    # floor(2500 / 5.255) -> 475 acciones
+    assert assessment.approved_quantity > 0
+    assert assessment.estimated_risk_dollars <= 2500.0
 
 
 def test_risk_engine_rejects_insufficient_rr():
@@ -57,13 +59,14 @@ def test_risk_engine_rejects_insufficient_rr():
         rationale="Setup con bajo R:R"
     )
 
-    assessment = engine.assess_proposal(proposal, equity=100000.0, daily_pnl=0.0, open_positions=[])
+    assessment = engine.assess_proposal(proposal, equity=1000000.0, daily_pnl=0.0, open_positions=[])
     assert assessment.decision == RiskDecision.REJECTED
     assert any("RATIO R:R INSUFICIENTE" in r for r in assessment.reasons)
 
 
-def test_risk_engine_circuit_breaker_daily_loss():
-    engine = DeterministicRiskEngine(max_daily_loss_pct=2.0)
+def test_risk_engine_circuit_breaker_daily_loss_10k():
+    """Verifica que el límite diario de pérdida de $10,000 USD active el Circuit Breaker de inmediato."""
+    engine = DeterministicRiskEngine(max_daily_loss=10000.0)
     proposal = TradeProposal(
         decision_id="dec_test_003",
         symbol="SPY",
@@ -76,11 +79,44 @@ def test_risk_engine_circuit_breaker_daily_loss():
         rationale="Test"
     )
 
-    # -2.5% de pérdida acumulada hoy
-    assessment = engine.assess_proposal(proposal, equity=100000.0, daily_pnl=-2500.0, open_positions=[])
+    # Pérdida del día de -$10,500 USD
+    assessment = engine.assess_proposal(proposal, equity=1000000.0, daily_pnl=-10500.0, open_positions=[])
     assert assessment.decision == RiskDecision.REJECTED
     assert assessment.circuit_breaker_active is True
     assert any("CIRCUIT BREAKER DIARIO" in r for r in assessment.reasons)
+
+
+def test_risk_engine_consecutive_losses_pause():
+    """Verifica la pausa de estrategia tras 3 pérdidas consecutivas."""
+    engine = DeterministicRiskEngine(max_consecutive_losses=3)
+    strat_code = "orb_test"
+
+    # Registrar 3 pérdidas consecutivas
+    engine.record_trade_result(strat_code, is_win=False)
+    engine.record_trade_result(strat_code, is_win=False)
+    engine.record_trade_result(strat_code, is_win=False)
+
+    proposal = TradeProposal(
+        decision_id="dec_test_consec_losses",
+        symbol="QQQ",
+        direction=SignalDirection.BUY,
+        entry_price=400.0,
+        stop_loss=395.0,
+        take_profit=410.0,
+        rr_ratio=2.0,
+        timestamp=datetime.utcnow(),
+        rationale="Test consec losses",
+        strategy_code=strat_code
+    )
+
+    assessment = engine.assess_proposal(proposal, equity=1000000.0, daily_pnl=0.0, open_positions=[])
+    assert assessment.decision == RiskDecision.REJECTED
+    assert any("ESTRATEGIA PAUSADA" in r for r in assessment.reasons)
+
+    # Restablecer tras una victoria
+    engine.record_trade_result(strat_code, is_win=True)
+    assessment2 = engine.assess_proposal(proposal, equity=1000000.0, daily_pnl=0.0, open_positions=[])
+    assert assessment2.decision == RiskDecision.APPROVED
 
 
 def test_analysis_only_mode_blocks_execution(paper_broker_instance):

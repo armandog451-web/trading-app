@@ -29,14 +29,23 @@ class AgentSettings(BaseSettings):
     # Kill Switch de Emergencia Global
     KILL_SWITCH_ACTIVE: bool = False
 
-    # Parámetros Deterministas de Gestión de Riesgo (Instrucción 12)
-    PAPER_INITIAL_CAPITAL: float = 100000.0
-    RISK_PER_TRADE_PCT: float = 1.0        # Máximo 1.0% de riesgo por trade
-    MAX_DAILY_LOSS_PCT: float = 2.0        # Freno de emergencia diario -2.0%
-    MAX_DRAWDOWN_PCT: float = 5.0          # Límite de drawdown de cartera -5.0%
-    MIN_RR_RATIO: float = 2.0              # Ratio mínimo Riesgo:Beneficio 1:2
-    MAX_OPEN_POSITIONS: int = 3            # Máximo 3 posiciones simultáneas
-    MAX_CAPITAL_ALLOCATION_PCT: float = 15.0 # Máximo 15% del capital total por activo
+    # Parámetros Deterministas de Gestión de Riesgo ($1,000,000 USD Paper Profile)
+    PAPER_INITIAL_CAPITAL: float = 1000000.0
+    RISK_PER_TRADE_PCT: float = 0.25           # 0.25% de riesgo por trade ($2,500 USD cap)
+    MAX_PLANNED_RISK_PER_TRADE: float = 2500.0 # $2,500 USD máx por trade
+    MAX_AGGREGATE_OPEN_RISK_PCT: float = 1.50  # 1.50% de riesgo abierto agregado ($15,000 USD cap)
+    MAX_AGGREGATE_OPEN_RISK: float = 15000.0
+    MAX_DAILY_LOSS_PCT: float = 1.00           # Freno de emergencia diario 1.00% ($10,000 USD cap)
+    MAX_DAILY_LOSS: float = 10000.0
+    MAX_CONSECUTIVE_LOSSES: int = 3            # Pausar estrategia tras 3 pérdidas consecutivas
+    DRAWDOWN_WARNING_PCT: float = 5.0          # Alerta y reducción de riesgo al 5.0%
+    DRAWDOWN_HALT_PCT: float = 10.0            # Detención total y autorización al 10.0%
+    MAX_GROSS_EXPOSURE_PCT: float = 50.0       # Máximo 50% de exposición bruta ($500,000 USD)
+    MAX_SINGLE_STOCK_EXPOSURE_PCT: float = 10.0 # Máximo 10% por activo ($100,000 USD)
+    MAX_SECTOR_EXPOSURE_PCT: float = 20.0       # Máximo 20% por sector ($200,000 USD)
+    MIN_RR_RATIO: float = 2.0                  # Ratio mínimo Riesgo:Beneficio 1:2
+    MAX_OPEN_POSITIONS: int = 5                # Máximo 5 posiciones simultáneas
+    MAX_CAPITAL_ALLOCATION_PCT: float = 10.0    # Máximo 10% del capital por activo
 
     # Parámetros de Simulación de Ejecución (Paper Broker)
     ESTIMATED_COMMISSION_PER_SHARE: float = 0.005  # $0.005 por acción

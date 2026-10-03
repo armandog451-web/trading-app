@@ -1,0 +1,51 @@
+trading:
+  mode: ANALYSIS_ONLY
+  initial_equity: 1000000
+  currency: USD
+  timezone: America/New_York
+  live_trading_enabled: false
+  allow_short_selling: false
+  allow_margin: false
+
+risk:
+  risk_per_trade_pct: 0.25
+  max_planned_risk_per_trade: 2500
+  max_aggregate_open_risk_pct: 1.50
+  max_aggregate_open_risk: 15000
+  max_daily_loss_pct: 1.00
+  max_daily_loss: 10000
+  max_consecutive_losses: 3
+
+  drawdown_warning_pct: 5.0
+  drawdown_halt_pct: 10.0
+
+  max_gross_exposure_pct: 50.0
+  max_gross_exposure: 500000
+  max_single_stock_exposure_pct: 10.0
+  max_single_stock_exposure: 100000
+  max_sector_exposure_pct: 20.0
+  max_sector_exposure: 200000
+
+options:
+  enabled_for_analysis: true
+  enabled_for_paper_trading: false
+  defined_risk_only: true
+  allow_naked_options: false
+  allow_0dte: false
+  max_planned_risk_per_trade: 2500
+  include_options_risk_in_portfolio_limits: true
+
+execution_simulation:
+  simulate_commissions: true
+  simulate_slippage: true
+  simulate_bid_ask_spread: true
+  reject_stale_market_data: true
+  prevent_duplicate_orders: true
+
+reporting:
+  daily_report: true
+  weekly_report: true
+  performance_by_strategy: true
+  performance_by_symbol: true
+  track_drawdown: true
+  track_realized_and_unrealized_pnl: true

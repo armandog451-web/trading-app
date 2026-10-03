@@ -99,6 +99,7 @@ class TradeProposal(BaseDomainModel):
     rr_ratio: float = Field(..., ge=1.0)
     timestamp: datetime
     rationale: str
+    strategy_code: Optional[str] = "generic"
 
 
 class RiskAssessment(BaseDomainModel):

@@ -120,7 +120,9 @@ class TestMarketScheduleSuite:
     def test_scheduler_task_execution_and_idempotency(self, scheduler):
         """Verifica la prevención de tareas duplicadas en el mismo día."""
         import asyncio
-        dt_test = datetime(2028, 11, 15, 9, 20, tzinfo=scheduler.calendar.tz)
+        import uuid
+        unique_year = 2030 + (hash(uuid.uuid4().hex) % 50)
+        dt_test = datetime(unique_year, 5, 10, 9, 20, tzinfo=scheduler.calendar.tz)
         scheduler.calendar.set_mock_clock(lambda: dt_test)
 
         # 1. Primera ejecución premarket
