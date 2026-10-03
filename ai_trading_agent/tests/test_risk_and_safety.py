@@ -13,6 +13,19 @@ from ai_trading_agent.domain.models import TradeProposal, PaperOrder, DecisionRe
 from ai_trading_agent.risk.engine import DeterministicRiskEngine
 from ai_trading_agent.execution.paper_broker import PaperBroker
 from ai_trading_agent.journal.trade_journal import trade_journal
+from database import init_db, set_setting
+from pydantic import ValidationError
+
+
+@pytest.fixture(autouse=True)
+def reset_risk_db_settings():
+    """Restablece el estado persistente de riesgo en SQLite antes de cada prueba."""
+    init_db()
+    set_setting("risk_high_water_mark", "1000000.0")
+    set_setting("daily_pnl_accumulated", "0.0")
+    set_setting("consecutive_losses_generic", "0")
+    set_setting("consecutive_losses_orb_test", "0")
+    set_setting("consecutive_losses_restart_test_strat", "0")
 
 
 def test_risk_engine_valid_sizing_1m_profile():
@@ -180,3 +193,112 @@ def test_paper_trading_execution_and_journal_trace(paper_broker_instance):
     assert retrieved is not None
     assert retrieved.decision_id == "dec_trace_999"
     assert retrieved.order_status == OrderStatus.FILLED
+
+
+def test_risk_engine_defends_against_data_errors():
+    """Verifica que la plataforma rechace precios inválidos/nulos a nivel de esquema Pydantic y de geometría."""
+    engine = DeterministicRiskEngine()
+
+    # 1. Pydantic debe rechazar precios <= 0 al instanciar TradeProposal
+    with pytest.raises(ValidationError):
+        TradeProposal(
+            decision_id="dec_err_neg",
+            symbol="SPY",
+            direction=SignalDirection.BUY,
+            entry_price=-100.0,
+            stop_loss=490.0,
+            take_profit=510.0,
+            rr_ratio=2.0,
+            timestamp=datetime.utcnow(),
+            rationale="Error test negative"
+        )
+
+    # 2. Motor de riesgo debe rechazar propuesta con geometría inválida (stop loss >= entry)
+    proposal_invalid_geom = TradeProposal(
+        decision_id="dec_err_geom",
+        symbol="SPY",
+        direction=SignalDirection.BUY,
+        entry_price=500.0,
+        stop_loss=505.0,  # SL por encima de entrada para un BUY
+        take_profit=520.0,
+        rr_ratio=2.0,
+        timestamp=datetime.utcnow(),
+        rationale="Invalid geometry"
+    )
+
+    assessment = engine.assess_proposal(proposal_invalid_geom, equity=1000000.0, daily_pnl=0.0, open_positions=[])
+    assert assessment.decision == RiskDecision.REJECTED
+    assert any("GEOMETRÍA INVÁLIDA" in r for r in assessment.reasons)
+
+
+def test_risk_engine_accounts_for_pending_orders_and_aggregate_risk():
+    """Verifica que el cálculo de riesgo abierto agregado incluya posiciones activas Y órdenes pendientes."""
+    engine = DeterministicRiskEngine(max_aggregate_open_risk=15000.0)
+
+    # Simular orden pendiente con $14,000 USD de riesgo (700 acciones * $20 stop dist)
+    class MockPendingOrder:
+        symbol = "QQQ"
+        entry_price = 400.0
+        stop_loss = 380.0
+        quantity = 700  # 700 * $20 = $14,000 riesgo
+
+    pending = [MockPendingOrder()]
+
+    # Propuesta que requiere ~$2,470 USD adicionales de riesgo ($14k + $2.47k = $16.47k > $15k cap)
+    proposal = TradeProposal(
+        decision_id="dec_test_pending",
+        symbol="AAPL",
+        direction=SignalDirection.BUY,
+        entry_price=200.0,
+        stop_loss=190.0,  # $10 riesgo por acción
+        take_profit=230.0,
+        rr_ratio=3.0,
+        timestamp=datetime.utcnow(),
+        rationale="Test pending risk"
+    )
+
+    assessment = engine.assess_proposal(
+        proposal=proposal,
+        equity=1000000.0,
+        daily_pnl=0.0,
+        open_positions=[],
+        pending_orders=pending
+    )
+
+    assert assessment.decision == RiskDecision.REJECTED
+    assert any("EXCESO DE RIESGO AGREGADO" in r for r in assessment.reasons)
+
+
+def test_risk_engine_persists_across_simulated_process_restart():
+    """Verifica la persistencia determinista de HWM Drawdown y contador de pérdidas tras un reinicio del servicio."""
+    engine1 = DeterministicRiskEngine()
+    strat = "restart_test_strat"
+
+    # Registrar HWM alto ($1,200,000)
+    engine1.get_high_water_mark(1200000.0)
+
+    # Registrar 3 pérdidas consecutivas
+    for _ in range(3):
+        engine1.record_trade_result(strat, is_win=False)
+
+    # SIMULAR REINICIO DEL PROCESO (crear nueva instancia)
+    engine2 = DeterministicRiskEngine()
+
+    # Verificar que el HWM se mantiene en $1.2M (con $1M actual = 16.6% drawdown > 10% halt)
+    proposal = TradeProposal(
+        decision_id="dec_restart_test",
+        symbol="SPY",
+        direction=SignalDirection.BUY,
+        entry_price=500.0,
+        stop_loss=495.0,
+        take_profit=510.0,
+        rr_ratio=2.0,
+        timestamp=datetime.utcnow(),
+        rationale="Restart test",
+        strategy_code=strat
+    )
+
+    assessment = engine2.assess_proposal(proposal, equity=1000000.0, daily_pnl=0.0, open_positions=[])
+    assert assessment.decision == RiskDecision.REJECTED
+    assert assessment.circuit_breaker_active is True
+    assert any("DRAWDOWN HALT ACTIVO" in r for r in assessment.reasons)

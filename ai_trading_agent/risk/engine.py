@@ -36,14 +36,21 @@ class DeterministicRiskEngine:
     def get_high_water_mark(self, current_equity: float) -> float:
         """Obtiene y actualiza persistentemente el máximo histórico de equity (High Water Mark)."""
         saved_hwm = get_setting("risk_high_water_mark", str(settings.PAPER_INITIAL_CAPITAL))
-        hwm = max(float(saved_hwm), current_equity)
+        try:
+            hwm_val = float(saved_hwm)
+        except (ValueError, TypeError):
+            hwm_val = float(settings.PAPER_INITIAL_CAPITAL)
+        hwm = max(hwm_val, current_equity)
         set_setting("risk_high_water_mark", str(hwm))
         return hwm
 
     def get_consecutive_losses(self, strategy_code: str) -> int:
         """Recupera persistentemente las pérdidas consecutivas de una estrategia."""
         val = get_setting(f"consecutive_losses_{strategy_code}", "0")
-        return int(val)
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0
 
     def record_trade_result(self, strategy_code: str, is_win: bool):
         """Actualiza persistentemente el contador de pérdidas consecutivas tras cada operación salvada."""
@@ -53,18 +60,64 @@ class DeterministicRiskEngine:
             curr = self.get_consecutive_losses(strategy_code) + 1
             set_setting(f"consecutive_losses_{strategy_code}", str(curr))
 
+    def record_daily_pnl(self, net_pnl: float):
+        """Registra persistentemente el P&L acumulado del día para evitar reinicios inadvertidos."""
+        curr_pnl_str = get_setting("daily_pnl_accumulated", "0.0")
+        try:
+            curr_pnl = float(curr_pnl_str)
+        except (ValueError, TypeError):
+            curr_pnl = 0.0
+        new_pnl = curr_pnl + net_pnl
+        set_setting("daily_pnl_accumulated", str(new_pnl))
+
+    def get_persisted_daily_pnl(self, current_daily_pnl: float) -> float:
+        """Combina el PnL del runtime con la base de datos para resistir cierres o reinicios de servicio."""
+        stored = get_setting("daily_pnl_accumulated", "0.0")
+        try:
+            stored_val = float(stored)
+        except (ValueError, TypeError):
+            stored_val = 0.0
+        return min(current_daily_pnl, stored_val)
+
     def assess_proposal(
         self,
         proposal: TradeProposal,
         equity: float,
         daily_pnl: float,
         open_positions: List[Position],
+        pending_orders: Optional[List[Any]] = None,
         kill_switch_active: bool = False
     ) -> RiskAssessment:
         """
         Evalúa de forma determinista si una propuesta cumple todas las reglas de riesgo.
+        Soporta defensas contra errores de datos, reinicios de servicio y órdenes pendientes.
         """
         reasons = []
+        pending_orders = pending_orders or []
+
+        # 0. Defensa Estricta Contra Errores de Datos o Precios Obsoletos/Corruptos
+        if not proposal or not hasattr(proposal, "entry_price") or not hasattr(proposal, "stop_loss") or not hasattr(proposal, "take_profit"):
+            return RiskAssessment(
+                decision_id=getattr(proposal, "decision_id", "INVALID"),
+                decision=RiskDecision.REJECTED,
+                reasons=["ERROR DE DATOS: Estructura de la propuesta incompleta o inválida."]
+            )
+
+        entry = proposal.entry_price
+        sl = proposal.stop_loss
+        tp = proposal.take_profit
+
+        if (
+            entry is None or sl is None or tp is None or
+            math.isnan(entry) or math.isnan(sl) or math.isnan(tp) or
+            math.isinf(entry) or math.isinf(sl) or math.isinf(tp) or
+            entry <= 0 or sl <= 0 or tp <= 0
+        ):
+            return RiskAssessment(
+                decision_id=proposal.decision_id,
+                decision=RiskDecision.REJECTED,
+                reasons=[f"ERROR DE DATOS / PRECIO CORRUPTO: Entrada (${entry}), Stop Loss (${sl}) o Take Profit (${tp}) son nulos, obsoletos o menores/iguales a cero."]
+            )
 
         # 1. Kill Switch Global
         if kill_switch_active or settings.KILL_SWITCH_ACTIVE:
@@ -75,7 +128,7 @@ class DeterministicRiskEngine:
                 circuit_breaker_active=True
             )
 
-        # 2. Control de Drawdown desde High Water Mark (HWM)
+        # 2. Control de Drawdown desde High Water Mark (HWM) Persistente
         hwm = self.get_high_water_mark(equity)
         drawdown_dollars = max(0.0, hwm - equity)
         drawdown_pct = round((drawdown_dollars / hwm) * 100.0, 2)
@@ -88,16 +141,17 @@ class DeterministicRiskEngine:
                 circuit_breaker_active=True
             )
 
-        # 3. Circuit Breaker de Pérdida Diaria Máxima ($10,000 USD)
-        if daily_pnl <= -self.max_daily_loss:
+        # 3. Circuit Breaker de Pérdida Diaria Máxima ($10,000 USD - Persistente ante Reinicios)
+        effective_daily_pnl = self.get_persisted_daily_pnl(daily_pnl)
+        if effective_daily_pnl <= -self.max_daily_loss:
             return RiskAssessment(
                 decision_id=proposal.decision_id,
                 decision=RiskDecision.REJECTED,
-                reasons=[f"CIRCUIT BREAKER DIARIO (${self.max_daily_loss:,.2f}): Pérdida del día (${abs(daily_pnl):,.2f}) alcanzó el límite diario."],
+                reasons=[f"CIRCUIT BREAKER DIARIO (${self.max_daily_loss:,.2f}): Pérdida del día (${abs(effective_daily_pnl):,.2f}) alcanzó o superó el límite diario."],
                 circuit_breaker_active=True
             )
 
-        # 4. Pausa de Estrategia por Pérdidas Consecutivas (>= 3)
+        # 4. Pausa de Estrategia por Pérdidas Consecutivas (>= 3 - Persistente ante Reinicios)
         strat_code = getattr(proposal, "strategy_code", "generic")
         consec_losses = self.get_consecutive_losses(strat_code)
         if consec_losses >= self.max_consecutive_losses:
@@ -107,12 +161,13 @@ class DeterministicRiskEngine:
                 reasons=[f"ESTRATEGIA PAUSADA ({strat_code}): {consec_losses} pérdidas consecutivas registradas (máximo permitido: {self.max_consecutive_losses}). Exige revisión técnica."]
             )
 
-        # 5. Límite de Posiciones Abiertas y Exposición Duplicada
-        if len(open_positions) >= self.max_open_positions:
+        # 5. Límite de Posiciones Abiertas y Exposición Duplicada (Posiciones + Órdenes Pendientes)
+        total_open_and_pending = len(open_positions) + len(pending_orders)
+        if total_open_and_pending >= self.max_open_positions:
             return RiskAssessment(
                 decision_id=proposal.decision_id,
                 decision=RiskDecision.REJECTED,
-                reasons=[f"LÍMITE DE POSICIONES: Ya existen {len(open_positions)} posiciones abiertas (máximo: {self.max_open_positions})."]
+                reasons=[f"LÍMITE DE POSICIONES/ÓRDENES: Existen {len(open_positions)} posiciones abiertas y {len(pending_orders)} órdenes pendientes (máximo permitido: {self.max_open_positions})."]
             )
 
         if any(p.symbol == proposal.symbol for p in open_positions):
@@ -122,11 +177,14 @@ class DeterministicRiskEngine:
                 reasons=[f"EXPOSICIÓN DUPLICADA: Ya existe una posición abierta en {proposal.symbol}."]
             )
 
-        # 6. Validación de Geometría de Precios y Ratio R:R Mínimo 1:2
-        entry = proposal.entry_price
-        sl = proposal.stop_loss
-        tp = proposal.take_profit
+        if any(getattr(o, "symbol", None) == proposal.symbol for o in pending_orders):
+            return RiskAssessment(
+                decision_id=proposal.decision_id,
+                decision=RiskDecision.REJECTED,
+                reasons=[f"ÓRDEN PENDIENTE EXISTENTE: Ya existe una orden pendiente de entrada para {proposal.symbol}."]
+            )
 
+        # 6. Validación de Geometría de Precios y Ratio R:R Mínimo 1:2
         if proposal.direction == SignalDirection.BUY:
             if not (sl < entry < tp):
                 return RiskAssessment(
@@ -160,7 +218,6 @@ class DeterministicRiskEngine:
             )
 
         # 7. Cálculo Determinista de Tamaño de Posición (Fórmula Exacta: position_size = floor(risk_budget / risk_per_share))
-        # Ajuste conservador por costes y slippage (5 bps)
         slippage_cost = entry * 0.0005
         commission_cost = settings.ESTIMATED_COMMISSION_PER_SHARE
         risk_per_share = risk_dist + slippage_cost + commission_cost
@@ -188,15 +245,26 @@ class DeterministicRiskEngine:
 
         planned_risk = round(shares * risk_dist, 2)
 
-        # 8. Verificación de Riesgo Abierto Agregado (Máximo $15,000 USD / 1.50% eq)
-        existing_open_risk = sum(abs(p.quantity * (p.entry_price - p.stop_loss)) for p in open_positions if hasattr(p, "stop_loss") and p.stop_loss)
-        total_aggregate_risk = existing_open_risk + planned_risk
+        # 8. Verificación de Riesgo Abierto Agregado (Posiciones Abiertas + Órdenes Pendientes <= $15,000 USD / 1.50% eq)
+        existing_open_risk = sum(
+            abs(p.quantity * (p.entry_price - p.stop_loss))
+            for p in open_positions
+            if hasattr(p, "stop_loss") and p.stop_loss and hasattr(p, "entry_price") and p.entry_price
+        )
+
+        pending_open_risk = sum(
+            abs(getattr(o, "quantity", 0) * (getattr(o, "entry_price", 0) - getattr(o, "stop_loss", 0)))
+            for o in pending_orders
+            if getattr(o, "stop_loss", None) and getattr(o, "entry_price", None)
+        )
+
+        total_aggregate_risk = existing_open_risk + pending_open_risk + planned_risk
 
         if total_aggregate_risk > self.max_aggregate_open_risk:
             return RiskAssessment(
                 decision_id=proposal.decision_id,
                 decision=RiskDecision.REJECTED,
-                reasons=[f"EXCESO DE RIESGO AGREGADO: El riesgo total abierto (${total_aggregate_risk:,.2f}) excedería el límite máximo de ${self.max_aggregate_open_risk:,.2f} USD."]
+                reasons=[f"EXCESO DE RIESGO AGREGADO: El riesgo total abierto (${total_aggregate_risk:,.2f}, incluyendo órdenes pendientes) excedería el límite máximo de ${self.max_aggregate_open_risk:,.2f} USD."]
             )
 
         capital_allocated = round(shares * entry, 2)

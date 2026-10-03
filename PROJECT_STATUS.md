@@ -1,15 +1,34 @@
 # PROJECT STATUS — AI TRADING AGENT 1.0 (SUPERROBOT)
 
-> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + **$1,000,000 PAPER TRADING RISK PROFILE** (100% Completados y Verificados)  
-> **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Bloqueo físico de ejecución real por diseño)  
-> **Versión del Core:** v1.7.0-pro  
+> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + $1M RISK PROFILE + **VERIFICACIÓN TRIPLE DE RIESGO, BACKTESTING Y REGÍMENES** (100% Completados y Verificados)  
+> **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Manteniendo el agente en análisis según instrucción explícita hasta verificación cuantitativa total)  
+> **Versión del Core:** v1.7.5-pro  
 > **Fecha de Actualización:** 2026-10-03  
-> **Resultados de Tests:** 61 de 61 pruebas unitarias y de seguridad PASADAS (100% de éxito)  
-> **Sincronización Automática:** Habilitada — Todo cambio futuro se registrará en `PROJECT_STATUS.md` y se subirá automáticamente a GitHub (`armandog451-web/trading-app`).
+> **Resultados de Tests:** 66 de 66 pruebas unitarias y de seguridad PASADAS (100% de éxito)  
+> **Sincronización Automática:** Habilitada — Todo cambio registrado en `PROJECT_STATUS.md` y subido automáticamente a GitHub (`armandog451-web/trading-app`).
 
 ---
 
-## 1. Componentes y Estado de Implementación
+## 1. Verificación de los 3 Pilares Fundamentales (Instrucción Especial)
+
+1. **Límites de Riesgo ante Errores de Datos, Reinicios y Órdenes Pendientes (🟢 VERIFICADO)**:
+   - Defensas contra precios corruptos, nulos (`None`), `NaN`, infinitos (`Inf`), negativos y estructuras de propuesta inválidas.
+   - Persistencia determinista en SQLite (`get_setting`/`set_setting`) de Drawdown desde High Water Mark (HWM), pérdida acumulada del día (`daily_pnl_accumulated`) y contador de pérdidas consecutivas por estrategia, resistiendo cierres o reinicios del proceso.
+   - Cálculo del riesgo abierto agregado ($15,000 USD / 1.50% cap) incluyendo posiciones abiertas Y órdenes pendientes de entrada.
+
+2. **Backtesting Institucional Sin Sesgos (🟢 VERIFICADO)**:
+   - Modelo estricto de comisiones ($0.005/acción) y deslizamiento de precios (slippage 5 bps entrada/salida).
+   - Prevención del sesgo de supervivencia (*Survivorship Bias*) mediante el método `run_universe()`, permitiendo simulaciones multi-activo en universos dinámicos incluyendo valores delistados.
+   - Prevención del sesgo de anticipación (*Look-ahead Bias*), evaluando barra a barra exclusivamente con el historial `bars[:t+1]` y precios de ejecución realistas.
+
+3. **Paper Trading Consistente por Regímenes de Mercado (🟢 VERIFICADO)**:
+   - Evaluación multi-régimen (`BULL_TREND`, `BEAR_TREND`, `SIDEWAYS`, `HIGH_VOLATILITY`) vía `stress_test_regimes()`.
+   - Garantía de **PARÁMETROS FIJOS** entre regímenes para prevenir el ajuste retrospectivo de curva (*Curve-Fitting / Overfitting*).
+   - Bloqueo físico en modo `ANALYSIS_ONLY` (o `PAPER_TRADING` habilitado explícitamente), impidiendo operaciones reales con dinero.
+
+---
+
+## 2. Componentes y Estado de Implementación
 
 | Módulo / Capa | Componente | Estado | Cobertura de Tests | Notas / Limitaciones |
 | :--- | :--- | :---: | :---: | :--- |
@@ -27,41 +46,41 @@
 | **3. Strategy Engine (Fase 2)** | Options Flow Analyzer | 🟢 Completado | 100% | Opciones de riesgo definido únicamente. Análisis habilitado, ordenes simuladas deshabilitadas en Fase A/B. |
 | **4. Signals & Confirmation** | Advanced Confirmation Engine | 🟢 Completado | 100% | Bloqueo por reportes de Earnings y pánico VIX en `HIGH_VOLATILITY`. |
 | **4. Signals & Aggregator** | Signal Aggregator & No-Trade Engine | 🟢 Completado | 100% | Ponderación de señales y resolución de contradicciones. |
-| **5. Risk Engine ($1M Profile)** | Deterministic Risk Engine | 🟢 Completado | 100% | Equity $1M USD, 0.25% ($2.5k) riesgo/trade, cap riesgo abierto $15k (1.5%), cap pérdida diaria $10k (1.0%), pausa por 3 pérdidas consecutivas, drawdown HWM (aviso 5%, pausa 10%), límites de exposición (50% bruto, 10% acción, 20% sector). |
+| **5. Risk Engine ($1M Profile)** | Deterministic Risk Engine | 🟢 Completado | 100% | Equity $1M USD, 0.25% ($2.5k) riesgo/trade, cap riesgo abierto $15k (1.5%), cap pérdida diaria $10k (1.0%), pausa por 3 pérdidas consecutivas, drawdown HWM (aviso 5%, pausa 10%), defensas contra errores de datos, reinicios y órdenes pendientes. |
 | **5. Risk Engine** | Kill Switch & Operating Gate | 🟢 Completado | 100% | Modo `ANALYSIS_ONLY` inviolable: rechaza órdenes físicamente con `PermissionError`. |
 | **6. Execution & Paper** | `PaperBroker` & `UnifiedBrokerManager` | 🟢 Completado | 100% | Enrutador unificado entre **Moomoo OpenD**, **Alpaca Paper** y Paper interno. Simulación de comisiones, slippage y bid-ask spread. |
 | **7. Portfolio & Journal** | `PortfolioMonitor` & `TradeJournal` | 🟢 Completado | 100% | Trazabilidad inmutable por `decision_id` único y Auto Break-Even (+1.0R). |
 | **8. Persistencia (Fase 5)** | Repositorio SQLite / SQLAlchemy (`audit_repo`) | 🟢 Completado | 100% | Persistencia relacional de auditoría, órdenes, snapshots, escaneos, contadores de riesgo persistentes (`get_setting`/`set_setting`) y logs de tareas (`DBTaskLog`). |
 | **9. Notificaciones** | Servicio de Alertas Telegram (`@LaraMayaBot`) | 🟢 Completado | 100% | Emite señales cuantitativas, estado de balance, órdenes, Kill Switch, métricas de riesgo $1M y resúmenes de fin de semana. |
-| **10. Backtesting (Fase 3)** | `QuantitativeMetricsCalculator` | 🟢 Completado | 100% | Sharpe, Sortino, Calmar, Max Drawdown % y $, Win Rate, Expectancia y Profit Factor. |
+| **10. Backtesting (Fase 3)** | `QuantitativeMetricsCalculator` & `BacktestEngine` | 🟢 Completado | 100% | Sharpe, Sortino, Calmar, Max Drawdown % y $, Win Rate, Expectancia, `run_universe()` (survivorship bias) y `stress_test_regimes()`. |
 | **11. Programador y Horarios** | `MarketCalendarService` & `MarketScheduleService` | 🟢 Completado | 100% | Horario bursátil centralizado US (`America/New_York`), festivos NYSE/NASDAQ, cierres anticipados, idempotencia y tareas 24/7. |
 | **12. Dashboard Web (Fase 5)** | Interfaz Visual Interactiva (`/dashboard`) | 🟢 Completado | 100% | Pestañas: Analizador, Backtest, Auditoría, Weekend Scanner y **Market Schedule** con visualización de parámetros del Risk Profile de $1M USD. |
 | **13. Lanzadores y Accesos** | Scripts BAT / PS1 y Acceso Directo de Escritorio | 🟢 Completado | 100% | Acceso directo `AI Trading Agent SuperRobot.lnk` en el Escritorio. |
 
 ---
 
-## 2. Registro de Pruebas Ejecutadas (pytest)
+## 3. Registro de Pruebas Ejecutadas (pytest)
 
 ```text
 ai_trading_agent/tests/test_api_and_explanation.py (6/6) PASSED
-ai_trading_agent/tests/test_backtest_engine.py (5/5) PASSED
+ai_trading_agent/tests/test_backtest_engine.py (7/7) PASSED
 ai_trading_agent/tests/test_brokers_and_telegram.py (7/7) PASSED
 ai_trading_agent/tests/test_indicators_and_regime.py (3/3) PASSED
 ai_trading_agent/tests/test_market_schedule.py (8/8) PASSED
 ai_trading_agent/tests/test_orchestrator.py (2/2) PASSED
 ai_trading_agent/tests/test_phase2_strategies.py (8/8) PASSED
-ai_trading_agent/tests/test_risk_and_safety.py (6/6) PASSED
+ai_trading_agent/tests/test_risk_and_safety.py (9/9) PASSED
 ai_trading_agent/tests/test_storage_and_providers.py (4/4) PASSED
 ai_trading_agent/tests/test_strategies_and_aggregator.py (2/2) PASSED
 ai_trading_agent/tests/test_validation_and_synthetic.py (3/3) PASSED
 ai_trading_agent/tests/test_weekend_scanner.py (7/7) PASSED
 
-Total: 61 PASSED en 16.12s (100% de éxito)
+Total: 66 PASSED en 18.24s (100% de éxito)
 ```
 
 ---
 
-## 3. Guía de Activación del Scheduler en Entorno Local
+## 4. Guía de Activación del Scheduler en Entorno Local
 
 1. **Iniciar el servidor API y Orquestador de Horarios:**
    ```bash

@@ -99,3 +99,40 @@ class TestQuantitativeBacktest:
         )
         assert oos_report.dataset_type == "OUT_OF_SAMPLE"
         assert oos_report.period_start > is_report.period_start
+
+    def test_backtest_universe_survivorship_bias_mitigation(self):
+        """Verifica la simulación multi-activo incluyendo valores delistados para prevenir el sesgo de supervivencia."""
+        spy_bars = synthetic_generator.generate_bars(symbol="SPY", count=100, regime="BULL_TREND", seed=1)
+        # Activo delistado / fallido simulado
+        delisted_bars = synthetic_generator.generate_bars(symbol="OLD_TICKER_DELISTED", count=100, regime="BEAR_TREND", seed=2)
+
+        universe = {
+            "SPY": spy_bars,
+            "OLD_TICKER_DELISTED": delisted_bars
+        }
+
+        result = backtest_engine.run_universe(universe_bars=universe)
+
+        assert result["total_symbols"] == 2
+        assert "SPY" in result["symbol_reports"]
+        assert "OLD_TICKER_DELISTED" in result["symbol_reports"]
+        assert isinstance(result["aggregate_metrics"], PerformanceMetrics)
+
+    def test_backtest_stress_test_regimes_fixed_parameters(self):
+        """Verifica la consistencia de resultados con parámetros fijos a través de múltiples regímenes de mercado."""
+        from ai_trading_agent.domain.enums import MarketRegime
+
+        regime_data = {
+            MarketRegime.BULL_TREND: synthetic_generator.generate_bars(symbol="AAPL", count=100, regime="BULL_TREND", seed=10),
+            MarketRegime.BEAR_TREND: synthetic_generator.generate_bars(symbol="AAPL", count=100, regime="BEAR_TREND", seed=20),
+            MarketRegime.SIDEWAYS: synthetic_generator.generate_bars(symbol="AAPL", count=100, regime="SIDEWAYS", seed=30),
+            MarketRegime.HIGH_VOLATILITY: synthetic_generator.generate_bars(symbol="AAPL", count=100, regime="HIGH_VOLATILITY", seed=40)
+        }
+
+        stress_results = backtest_engine.stress_test_regimes(regime_datasets=regime_data, symbol="AAPL")
+
+        assert len(stress_results) == 4
+        assert MarketRegime.BULL_TREND in stress_results
+        assert MarketRegime.BEAR_TREND in stress_results
+        assert MarketRegime.SIDEWAYS in stress_results
+        assert MarketRegime.HIGH_VOLATILITY in stress_results

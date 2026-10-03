@@ -282,5 +282,52 @@ class BacktestEngine:
             dataset_type=dataset_type
         )
 
+    def run_universe(
+        self,
+        universe_bars: Dict[str, List[OHLCVBar]],
+        dataset_type: str = "FULL"
+    ) -> Dict[str, Any]:
+        """
+        Ejecuta el backtest en un universo dinámico de activos (incluyendo activos delistados),
+        mitigando el sesgo de supervivencia (Survivorship Bias).
+        """
+        reports = {}
+        all_trades = []
+        total_ending_capital = 0.0
+
+        for symbol, bars in universe_bars.items():
+            report = self.run(symbol=symbol, bars=bars, dataset_type=dataset_type)
+            reports[symbol] = report
+            all_trades.extend(report.trades)
+            total_ending_capital += report.ending_capital
+
+        combined_metrics = metrics_calculator.calculate(
+            trades=all_trades,
+            initial_capital=self.initial_capital * max(1, len(universe_bars))
+        )
+
+        return {
+            "symbol_reports": reports,
+            "aggregate_metrics": combined_metrics,
+            "total_trades": len(all_trades),
+            "total_symbols": len(universe_bars)
+        }
+
+    def stress_test_regimes(
+        self,
+        regime_datasets: Dict[MarketRegime, List[OHLCVBar]],
+        symbol: str = "BENCHMARK"
+    ) -> Dict[MarketRegime, PerformanceMetrics]:
+        """
+        Evalúa la consistencia de los resultados manteniendo PARÁMETROS FIJOS
+        en diferentes regímenes de mercado (BULL, BEAR, SIDEWAYS, HIGH_VOLATILITY).
+        Previene el ajuste retrospectivo de parámetros (Curve-Fitting / Overfitting).
+        """
+        results = {}
+        for regime, bars in regime_datasets.items():
+            report = self.run(symbol=symbol, bars=bars, dataset_type=f"REGIME_{regime.value}")
+            results[regime] = report.metrics
+        return results
+
 
 backtest_engine = BacktestEngine()
