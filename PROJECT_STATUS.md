@@ -1,30 +1,31 @@
 # PROJECT STATUS — AI TRADING AGENT 1.0 (SUPERROBOT)
 
-> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + $1M RISK PROFILE + **VERIFICACIÓN TRIPLE DE RIESGO, BACKTESTING Y REGÍMENES** (100% Completados y Verificados)  
-> **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Manteniendo el agente en análisis según instrucción explícita hasta verificación cuantitativa total)  
-> **Versión del Core:** v1.7.5-pro  
+> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + $1M RISK PROFILE + **PRUEBAS DE ESTRÉS DE ESCENARIOS EXTREMOS** (100% Completados y Verificados)  
+> **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Punto de partida conservatorio sin garantía de rentabilidad, manteniendo el agente en análisis hasta validación total)  
+> **Versión del Core:** v1.7.6-pro  
 > **Fecha de Actualización:** 2026-10-03  
-> **Resultados de Tests:** 66 de 66 pruebas unitarias y de seguridad PASADAS (100% de éxito)  
+> **Resultados de Tests:** 68 de 68 pruebas unitarias y de seguridad PASADAS (100% de éxito)  
 > **Sincronización Automática:** Habilitada — Todo cambio registrado en `PROJECT_STATUS.md` y subido automáticamente a GitHub (`armandog451-web/trading-app`).
 
 ---
 
-## 1. Verificación de los 3 Pilares Fundamentales (Instrucción Especial)
+## 1. Verificación de los 3 Pilares & Escenarios Extremos (Precisión Técnica)
 
-1. **Límites de Riesgo ante Errores de Datos, Reinicios y Órdenes Pendientes (🟢 VERIFICADO)**:
-   - Defensas contra precios corruptos, nulos (`None`), `NaN`, infinitos (`Inf`), negativos y estructuras de propuesta inválidas.
-   - Persistencia determinista en SQLite (`get_setting`/`set_setting`) de Drawdown desde High Water Mark (HWM), pérdida acumulada del día (`daily_pnl_accumulated`) y contador de pérdidas consecutivas por estrategia, resistiendo cierres o reinicios del proceso.
-   - Cálculo del riesgo abierto agregado ($15,000 USD / 1.50% cap) incluyendo posiciones abiertas Y órdenes pendientes de entrada.
+1. **Punto de Partida Conservador & Sin Garantía de Rentabilidad**:
+   - Los parámetros de riesgo ($1,000,000 USD de equity, 0.25% de riesgo por operación, cap de $15,000 USD en riesgo abierto, $10,000 USD de límite diario de pérdida y 5%/10% en Drawdown) constituyen una línea base conservadora para pruebas operativas y NO una garantía implícita de rentabilidad cuantitativa.
 
-2. **Backtesting Institucional Sin Sesgos (🟢 VERIFICADO)**:
-   - Modelo estricto de comisiones ($0.005/acción) y deslizamiento de precios (slippage 5 bps entrada/salida).
-   - Prevención del sesgo de supervivencia (*Survivorship Bias*) mediante el método `run_universe()`, permitiendo simulaciones multi-activo en universos dinámicos incluyendo valores delistados.
-   - Prevención del sesgo de anticipación (*Look-ahead Bias*), evaluando barra a barra exclusivamente con el historial `bars[:t+1]` y precios de ejecución realistas.
+2. **Pruebas de Estrés en Escenarios Extremos (🟢 VERIFICADO)**:
+   - **Gap Nocturno Catastrófico (-20% Gap Down)**: Se probó en `test_extreme_scenario_overnight_gap_and_slippage_stress`. Se verificó que cuando un evento de mercado reduce el equity por debajo del 10% del High Water Mark (HWM), la plataforma activa de inmediato el `DRAWDOWN HALT`, rechazando 100% de las nuevas propuestas de trade y exigiendo autorización humana explícita para reanudar.
+   - **Flash Crash Intradiario con Pérdida Extrema (-$25,000 USD)**: Se probó en `test_extreme_scenario_flash_crash_daily_loss_breach`. Se comprobó que una ruptura severa del límite diario de loss activa el *Circuit Breaker* determinista con bandera inmutable `circuit_breaker_active = True`, bloqueando físicamente la creación de órdenes de compra.
 
-3. **Paper Trading Consistente por Regímenes de Mercado (🟢 VERIFICADO)**:
-   - Evaluación multi-régimen (`BULL_TREND`, `BEAR_TREND`, `SIDEWAYS`, `HIGH_VOLATILITY`) vía `stress_test_regimes()`.
-   - Garantía de **PARÁMETROS FIJOS** entre regímenes para prevenir el ajuste retrospectivo de curva (*Curve-Fitting / Overfitting*).
-   - Bloqueo físico en modo `ANALYSIS_ONLY` (o `PAPER_TRADING` habilitado explícitamente), impidiendo operaciones reales con dinero.
+3. **Límites de Riesgo ante Errores de Datos, Reinicios y Órdenes Pendientes (🟢 VERIFICADO)**:
+   - Defensas contra precios corruptos, nulos (`None`), `NaN`, infinitos (`Inf`), negativos y geometrías inválidas.
+   - Persistencia determinista en SQLite de HWM, pérdida diaria acumulada y contador de pérdidas consecutivas por estrategia.
+   - Cálculo del riesgo abierto agregado computando posiciones abiertas Y órdenes pendientes de entrada.
+
+4. **Backtesting Institucional Sin Sesgos (🟢 VERIFICADO)**:
+   - Modelo de comisiones ($0.005/acción) y slippage (5 bps).
+   - Prevención de *Survivorship Bias* (`run_universe()`) y *Look-Ahead Bias* (simulación paso a paso $bars[:t+1]$).
 
 ---
 

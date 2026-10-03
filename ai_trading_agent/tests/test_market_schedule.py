@@ -121,9 +121,18 @@ class TestMarketScheduleSuite:
         """Verifica la prevención de tareas duplicadas en el mismo día."""
         import asyncio
         import uuid
-        unique_year = 2030 + (hash(uuid.uuid4().hex) % 50)
-        dt_test = datetime(unique_year, 5, 10, 9, 20, tzinfo=scheduler.calendar.tz)
+        # Miércoles 14 de Mayo de 2025 (Día Hábil de Mercado garantizado)
+        run_id = uuid.uuid4().hex[:6]
+        dt_test = datetime(2025, 5, 14, 9, 20, tzinfo=scheduler.calendar.tz)
         scheduler.calendar.set_mock_clock(lambda: dt_test)
+
+        # Limpiar cualquier log previo de la prueba
+        from database import get_connection
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM logs WHERE message LIKE '%Premarket%'")
+        conn.commit()
+        conn.close()
 
         # 1. Primera ejecución premarket
         res1 = asyncio.run(scheduler.run_premarket_scan(force=False))

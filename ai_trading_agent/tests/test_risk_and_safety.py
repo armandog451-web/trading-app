@@ -302,3 +302,74 @@ def test_risk_engine_persists_across_simulated_process_restart():
     assert assessment.decision == RiskDecision.REJECTED
     assert assessment.circuit_breaker_active is True
     assert any("DRAWDOWN HALT ACTIVO" in r for r in assessment.reasons)
+
+
+def test_extreme_scenario_overnight_gap_and_slippage_stress():
+    """
+    Escenario Extremo 1: Gap nocturno del -20% o slippage masivo que hace que la pérdida real supere
+    el riesgo planificado. Verifica que la caída de equity activa el Drawdown Halt (>= 10%)
+    y bloquea completamente nuevas entradas.
+    """
+    engine = DeterministicRiskEngine()
+    
+    # HWM inicial de $1,000,000 USD
+    engine.get_high_water_mark(1000000.0)
+
+    # Gap de apertura catastrófico reduce el equity a $880,000 USD (12% Drawdown desde HWM)
+    catastrophic_equity = 880000.0
+
+    proposal = TradeProposal(
+        decision_id="dec_extreme_gap",
+        symbol="SPY",
+        direction=SignalDirection.BUY,
+        entry_price=500.0,
+        stop_loss=495.0,
+        take_profit=510.0,
+        rr_ratio=2.0,
+        timestamp=datetime.utcnow(),
+        rationale="Intento de entrada post-gap"
+    )
+
+    assessment = engine.assess_proposal(
+        proposal=proposal,
+        equity=catastrophic_equity,
+        daily_pnl=-120000.0,
+        open_positions=[]
+    )
+
+    assert assessment.decision == RiskDecision.REJECTED
+    assert assessment.circuit_breaker_active is True
+    assert any("DRAWDOWN HALT ACTIVO" in r for r in assessment.reasons)
+
+
+def test_extreme_scenario_flash_crash_daily_loss_breach():
+    """
+    Escenario Extremo 2: Flash crash intradiario con múltiples ejecuciones con slippage severo.
+    La pérdida del día alcanza -$25,000 USD (muy por encima del límite de $10,000 USD).
+    Verifica la activación inmediata del Circuit Breaker diario determinista.
+    """
+    engine = DeterministicRiskEngine(max_daily_loss=10000.0)
+
+    proposal = TradeProposal(
+        decision_id="dec_extreme_flash_crash",
+        symbol="QQQ",
+        direction=SignalDirection.BUY,
+        entry_price=400.0,
+        stop_loss=395.0,
+        take_profit=410.0,
+        rr_ratio=2.0,
+        timestamp=datetime.utcnow(),
+        rationale="Intento de rebote en flash crash"
+    )
+
+    # Pérdida extrema intradiaria -$25,000 USD
+    assessment = engine.assess_proposal(
+        proposal=proposal,
+        equity=975000.0,
+        daily_pnl=-25000.0,
+        open_positions=[]
+    )
+
+    assert assessment.decision == RiskDecision.REJECTED
+    assert assessment.circuit_breaker_active is True
+    assert any("CIRCUIT BREAKER DIARIO" in r for r in assessment.reasons)
