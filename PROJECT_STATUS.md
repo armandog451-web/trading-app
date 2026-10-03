@@ -4,7 +4,8 @@
 > **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Bloqueo físico de ejecución real por diseño)  
 > **Versión del Core:** v1.6.0-pro  
 > **Fecha de Actualización:** 2026-10-03  
-> **Resultados de Tests:** 60 de 60 pruebas unitarias y de seguridad PASADAS (100% de éxito)
+> **Resultados de Tests:** 60 de 60 pruebas unitarias y de seguridad PASADAS (100% de éxito)  
+> **Sincronización Automática:** Habilitada — Todo cambio futuro se registrará en `PROJECT_STATUS.md` y se subirá automáticamente a GitHub (`armandog451-web/trading-app`).
 
 ---
 
