@@ -76,6 +76,15 @@ class BotRunner:
             try:
                 self.last_scan_time = datetime.utcnow()
 
+                # 0. Comprobar si es fin de semana (Wall Street cerrado)
+                import pytz
+                ny_tz = pytz.timezone("America/New_York")
+                now_ny = datetime.now(ny_tz)
+                if now_ny.weekday() in (5, 6):
+                    # Fin de semana: Mercados de acciones cerrados. El Weekend Engine gestiona la optimización autónoma.
+                    await asyncio.sleep(60)
+                    continue
+
                 # 1. Comprobar Cierre Forzoso Intraday (15:50 EST)
                 if risk_engine.should_square_off():
                     if not self._square_off_done:

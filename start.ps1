@@ -1,9 +1,9 @@
-# TradePulse - Lanzador Unificado
+# AlgortimTrading Robot v2.0 PRO - Lanzador Unificado
 $ErrorActionPreference = "Stop"
 
 $rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Priorizar el entorno virtual .venv del proyecto
+# Priorizar el entorno virtual .venv del proyecto o Python global
 $venvPy = Join-Path $rootDir ".venv\Scripts\python.exe"
 $globalPy = "C:\Users\edsel\AppData\Local\Programs\Python\Python311\python.exe"
 
@@ -16,14 +16,14 @@ if (Test-Path $venvPy) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " TradePulse Quantitative Day Trading Engine" -ForegroundColor Green
-Write-Host " Arquitectura Top-Down (Macro, COT, Opciones, Liquidez & R:R)" -ForegroundColor White
+Write-Host " AlgortimTrading Robot v2.0 PRO" -ForegroundColor Green
+Write-Host " Motor Cuantitativo Hibrido (Moomoo & Alpaca + Telegram)" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-Write-Host "Iniciando TradePulse Engine en http://localhost:8000..." -ForegroundColor Yellow
+Write-Host "Iniciando AlgortimTrading Robot en http://localhost:8050..." -ForegroundColor Yellow
 
-# Iniciar servidor backend unificado
-$backendProc = Start-Process -FilePath $pyExe -ArgumentList "run.py" -WorkingDirectory "$rootDir\backend" -PassThru
+# Iniciar servidor FastAPI de AlgortimTrading Robot (server.py)
+$robotProc = Start-Process -FilePath $pyExe -ArgumentList "server.py" -WorkingDirectory $rootDir -PassThru
 
 # Esperar 2.5 segundos para arranque del servidor
 Start-Sleep -Seconds 2.5
@@ -44,20 +44,20 @@ foreach ($cp in $chromePaths) {
 }
 
 if ($chromeExe) {
-    Start-Process -FilePath $chromeExe -ArgumentList "http://localhost:8000"
+    Start-Process -FilePath $chromeExe -ArgumentList "http://localhost:8050"
 } else {
-    Start-Process "http://localhost:8000"
+    Start-Process "http://localhost:8050"
 }
 
 Write-Host ""
-Write-Host ">> APLICACION ACTIVA Y FUNCIONANDO <<" -ForegroundColor Green
-Write-Host "URL Dashboard: http://localhost:8000" -ForegroundColor Cyan
-Write-Host "Documentacion API: http://localhost:8000/docs" -ForegroundColor Cyan
+Write-Host ">> ALGORITMTRADING ROBOT ACTIVO Y FUNCIONANDO <<" -ForegroundColor Green
+Write-Host "URL Dashboard: http://localhost:8050" -ForegroundColor Cyan
+Write-Host "Documentacion API: http://localhost:8050/docs" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Para detener el servidor de trading, presiona Ctrl+C o cierra esta ventana." -ForegroundColor Gray
 
 try {
-    Wait-Process -Id $backendProc.Id
+    Wait-Process -Id $robotProc.Id
 } catch {
-    Stop-Process -Id $backendProc.Id -Force -ErrorAction SilentlyContinue
+    Stop-Process -Id $robotProc.Id -Force -ErrorAction SilentlyContinue
 }

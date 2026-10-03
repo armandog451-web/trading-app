@@ -58,7 +58,13 @@ class StrategyEngine:
         self.last_scan_time = now_ny.strftime("%H:%M:%S EST")
 
         # Filtro de Sesión Institucional Wall Street
-        if "09:30" <= time_str < "10:00":
+        is_weekend = now_ny.weekday() in [5, 6]
+        if is_weekend:
+            self.current_session = "Fin de Semana (Modo Preparación & Calibración ML)"
+            logger.info(f"Escaneando [{self.current_session}] a las {self.last_scan_time}: Mercado cerrado. El escáner intradía no genera señales ejecutables el fin de semana. Candidatos preparados por Weekend Engine para la apertura del Lunes.")
+            return  # SEPARACIÓN ESTRICTA: El fin de semana solo prepara candidatos; no se emiten señales ejecutables.
+
+        elif "09:30" <= time_str < "10:00":
             self.current_session = "Apertura (Opening Range - Alta Volatilidad)"
             min_score = 80.0
         elif "10:00" <= time_str < "11:30":
@@ -74,7 +80,7 @@ class StrategyEngine:
             self.current_session = "Cierre de Mercado (Auto-Square Off Activo)"
             return  # No se abren nuevas posiciones justo antes del cierre
         else:
-            self.current_session = "Modo Demo Extendido (24/7)"
+            self.current_session = "Modo Demo Extendido (Pre/After Market)"
             min_score = 68.0
 
         logger.info(f"Escaneando [{self.current_session}] a las {self.last_scan_time}...")
@@ -185,6 +191,29 @@ class StrategyEngine:
 
             if not signals_found:
                 return
+
+            # Confirmación de Candidatos de Fin de Semana (si el activo fue preparado previamente)
+            import json
+            from database import get_setting
+            prepared_json = get_setting("weekend_prepared_candidates", "[]")
+            try:
+                prepared_candidates = json.loads(prepared_json) if prepared_json else []
+            except Exception:
+                prepared_candidates = []
+
+            cand_map = {c["symbol"]: c for c in prepared_candidates if isinstance(c, dict) and "symbol" in c}
+            if symbol in cand_map:
+                cand = cand_map[symbol]
+                cand_bias = cand.get("bias", "")
+                pivot = cand.get("pivot", current_price)
+                # Confirmar si la condición viva en mercado apoya la tesis del fin de semana
+                for sig in signals_found:
+                    if "ALCISTA" in cand_bias and sig["side"] == "BUY":
+                        sig["score"] += 8.0  # Bonificación por confluencia con preparación de fin de semana
+                        sig["rationale"] += f" [Confirmación Intradía Lunes]: Candidato pre-escaneado ({cand_bias}) verificado en vivo sobre nivel pivote ${pivot:.2f}."
+                    elif "BAJISTA" in cand_bias and sig["side"] == "SELL":
+                        sig["score"] += 8.0
+                        sig["rationale"] += f" [Confirmación Intradía Lunes]: Candidato pre-escaneado ({cand_bias}) verificado en vivo bajo nivel pivote ${pivot:.2f}."
 
             # Seleccionar la señal con mayor puntuación ponderada
             best_sig = max(signals_found, key=lambda x: x["score"])

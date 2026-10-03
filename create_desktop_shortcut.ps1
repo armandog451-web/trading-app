@@ -1,4 +1,4 @@
-# Script to create official desktop shortcut for AlgortimTrading Robot
+# Script to create official desktop shortcuts for AlgortimTrading Robot & TradePulse
 $WshShell = New-Object -ComObject WScript.Shell
 $desktopPaths = @(
     [Environment]::GetFolderPath('Desktop'),
@@ -7,9 +7,10 @@ $desktopPaths = @(
 ) | Select-Object -Unique
 
 # Target files
-$targetBat = "C:\Users\edsel\OneDrive\Documents\PROJET 2\start.bat"
 $workingDir = "C:\Users\edsel\OneDrive\Documents\PROJET 2"
-$iconFile = "C:\Users\edsel\OneDrive\Documents\PROJET 2\app_icon.ico"
+$robotBat = Join-Path $workingDir "start.bat"
+$tradepulseBat = Join-Path $workingDir "start_tradepulse.bat"
+$iconFile = Join-Path $workingDir "app_icon.ico"
 
 foreach ($d in $desktopPaths) {
     if (Test-Path $d) {
@@ -17,15 +18,38 @@ foreach ($d in $desktopPaths) {
         Remove-Item (Join-Path $d "AlgortimTradingBot.lnk") -Force -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $d "AlgortimTradingBot.bat") -Force -ErrorAction SilentlyContinue
 
-        # Create the new official shortcut
-        $shortcutPath = Join-Path $d "AlgortimTrading Robot.lnk"
-        $shortcut = $WshShell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = $targetBat
-        $shortcut.WorkingDirectory = $workingDir
+        # 1. Acceso Directo Oficial: AlgortimTrading Robot
+        $robotShortcutPath = Join-Path $d "AlgortimTrading Robot.lnk"
+        $robotShortcut = $WshShell.CreateShortcut($robotShortcutPath)
+        $robotShortcut.TargetPath = $robotBat
+        $robotShortcut.WorkingDirectory = $workingDir
         if (Test-Path $iconFile) {
-            $shortcut.IconLocation = "$iconFile,0"
+            $robotShortcut.IconLocation = "$iconFile,0"
         }
-        $shortcut.Save()
-        Write-Host "Acceso directo creado exitosamente en: $shortcutPath"
+        $robotShortcut.Save()
+        Write-Host "Acceso directo AlgortimTrading Robot actualizado en: $robotShortcutPath"
+
+        # 2. Acceso Directo Oficial: TradePulse Engine
+        $tpShortcutPath = Join-Path $d "TradePulse Engine.lnk"
+        $tpShortcut = $WshShell.CreateShortcut($tpShortcutPath)
+        $tpShortcut.TargetPath = $tradepulseBat
+        $tpShortcut.WorkingDirectory = $workingDir
+        if (Test-Path $iconFile) {
+            $tpShortcut.IconLocation = "$iconFile,0"
+        }
+        $tpShortcut.Save()
+        Write-Host "Acceso directo TradePulse Engine creado en: $tpShortcutPath"
+
+        # 3. Acceso Directo Oficial: AI Trading Agent SuperRobot
+        $superRobotBat = Join-Path $workingDir "start_superrobot.bat"
+        $srShortcutPath = Join-Path $d "AI Trading Agent SuperRobot.lnk"
+        $srShortcut = $WshShell.CreateShortcut($srShortcutPath)
+        $srShortcut.TargetPath = $superRobotBat
+        $srShortcut.WorkingDirectory = $workingDir
+        if (Test-Path $iconFile) {
+            $srShortcut.IconLocation = "$iconFile,0"
+        }
+        $srShortcut.Save()
+        Write-Host "Acceso directo AI Trading Agent SuperRobot creado en: $srShortcutPath"
     }
 }

@@ -28,8 +28,11 @@ async def lifespan(app: FastAPI):
     strategy_engine.start()
     guardian.start()
     latency_guardian.start()
+    from weekend_engine import weekend_engine
+    weekend_engine.start_auto_scheduler()
     yield
     logger.info("Deteniendo AlgortimTrading Robot...")
+    weekend_engine.stop_auto_scheduler()
     latency_guardian.stop()
     guardian.stop()
     strategy_engine.stop()
@@ -212,7 +215,16 @@ def get_latency():
 async def send_latency_telegram():
     result = latency_guardian.check_and_optimize()
     await latency_guardian._send_latency_alert(result)
-    return {"success": True, "result": result}
+@app.post("/api/weekend/optimize")
+async def run_weekend_optimization_api():
+    from weekend_engine import weekend_engine
+    result = await weekend_engine.run_weekend_optimization(send_telegram=True)
+    return result
+
+@app.get("/api/weekend/report")
+def get_weekend_report_api():
+    from weekend_engine import weekend_engine
+    return weekend_engine.last_report or {"status": "none", "message": "No se ha ejecutado optimización de fin de semana todavía."}
 
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():

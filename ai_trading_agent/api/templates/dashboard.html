@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Agent 1.0 — SuperRobot Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #121826;
+            --bg-card: #182234;
+            --border: #233148;
+            --text-main: #f0f4f8;
+            --text-muted: #8b9bb4;
+            --accent-blue: #2563eb;
+            --accent-cyan: #06b6d4;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --purple: #8b5cf6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-main); min-height: 100vh; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .logo-group { display: flex; align-items: center; gap: 12px; }
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-mode { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid var(--green); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid var(--red); }
+        .badge-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--accent-blue); color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-danger { background: #b91c1c; color: #fff; }
+        .btn-danger:hover { background: #991b1b; }
+        .btn-secondary { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+        .stat-value { font-size: 24px; font-weight: 700; }
+        .tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .tab-btn { background: none; border: none; color: var(--text-muted); padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
+        .panel { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+        .panel-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .form-control { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; }
+        .form-control:focus { border-color: var(--accent-cyan); }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+        th { background: var(--bg-card); color: var(--text-muted); padding: 10px 12px; font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+        .alert-box { background: rgba(37, 99, 235, 0.1); border-left: 4px solid var(--accent-blue); padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
+        .box-warning { background: rgba(245, 158, 11, 0.1); border-left-color: var(--yellow); }
+        .box-success { background: rgba(16, 185, 129, 0.1); border-left-color: var(--green); }
+        .box-danger { background: rgba(239, 68, 68, 0.1); border-left-color: var(--red); }
+        .code-box { background: #070a10; border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; color: #a5f3fc; overflow-x: auto; max-height: 250px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo-group">
+            <h1 style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">🤖 AI TRADING AGENT 1.0 <span style="color: var(--accent-cyan);">SUPERROBOT</span></h1>
+            <span class="badge badge-mode" id="badgeMode">ANALYSIS_ONLY</span>
+            <span class="badge badge-cyan" id="badgeBroker">MOOMOO OPEND</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select class="form-control" id="brokerSelect" onchange="changeBroker()" style="font-weight: 600;">
+                <option value="moomoo">🏦 Moomoo OpenD (Paper)</option>
+                <option value="alpaca">🦙 Alpaca Markets (Paper)</option>
+                <option value="paper">📄 Paper Interno</option>
+            </select>
+            <button class="btn btn-secondary" onclick="sendTelegramBalance()">📱 Saldo a Telegram</button>
+            <button class="btn btn-secondary" onclick="testTelegram()">💬 Probar Bot</button>
+            <button class="btn btn-danger" id="btnKillSwitch" onclick="toggleKillSwitch()">🛑 KILL SWITCH</button>
+            <button class="btn btn-secondary" onclick="loadAccountAndHealth()">🔄 Refrescar</button>
+        </div>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="grid-stats">
+        <div class="stat-card">
+            <div class="stat-label">Capital Simulado (Paper)</div>
+            <div class="stat-value" id="valEquity">$100,000.00</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">PnL Realizado</div>
+            <div class="stat-value" id="valRealizedPnl" style="color: var(--green);">$0.00</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Posiciones Abiertas</div>
+            <div class="stat-value" id="valPositions">0 / 3</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Riesgo Máximo por Operación</div>
+            <div class="stat-value" id="valRiskPct">1.0% ($1,000)</div>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('analyzer')">📊 Analizador Institucional</button>
+        <button class="tab-btn" onclick="switchTab('backtest')">📈 Backtest Walk-Forward</button>
+        <button class="tab-btn" onclick="switchTab('journal')">📖 Auditoría & Journal</button>
+        <button class="tab-btn" onclick="switchTab('scanner')">📅 Weekend Scanner</button>
+        <button class="tab-btn" onclick="switchTab('schedule')">🕒 Market Schedule</button>
+    </div>
+
+    <!-- TAB 1: ANALYZER -->
+    <div id="tab-analyzer" class="panel">
+        <div class="panel-title">
+            <span>Diagnóstico Cuantitativo Multidimensional</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Sin Look-Ahead Bias | Control de Riesgo Determinista</span>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Símbolo / Ticker</label>
+                <select class="form-control" id="anSymbol">
+                    <option value="AAPL">AAPL (Apple Inc.)</option>
+                    <option value="MSFT">MSFT (Microsoft)</option>
+                    <option value="NVDA">NVDA (Nvidia Corp.)</option>
+                    <option value="SPY" selected>SPY (S&P 500 ETF)</option>
+                    <option value="QQQ">QQQ (Nasdaq 100 ETF)</option>
+                    <option value="TSLA">TSLA (Tesla Inc.)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Barras Históricas</label>
+                <input type="number" class="form-control" id="anBars" value="100" style="width: 100px;">
+            </div>
+            <div class="form-group">
+                <label>Régimen de Mercado</label>
+                <select class="form-control" id="anRegime">
+                    <option value="BULL_TREND">BULL_TREND (Tendencia Alcista)</option>
+                    <option value="BEAR_TREND">BEAR_TREND (Tendencia Bajista)</option>
+                    <option value="SIDEWAYS">SIDEWAYS (Rango Lateral)</option>
+                    <option value="HIGH_VOLATILITY">HIGH_VOLATILITY (Alta Volatilidad)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Reporte de Beneficios Hoy</label>
+                <select class="form-control" id="anEarnings">
+                    <option value="false">No (Sesión Normal)</option>
+                    <option value="true">Sí (Earnings Blackout)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="runAnalysis()">🚀 Ejecutar Análisis</button>
+        </div>
+
+        <div id="analysisOutput" style="display: none; margin-top: 20px;">
+            <div id="analysisAlert" class="alert-box"></div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-label">Confluencia Cuantitativa</div>
+                    <div class="stat-value" id="outScore">--</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="outRegime">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Parámetros de Riesgo Determinista</div>
+                    <div style="font-size: 14px; margin-top: 6px;" id="outRiskParams">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Estructuración de Opciones (&le; $200 USD)</div>
+                    <div style="font-size: 14px; margin-top: 6px;" id="outOptionParams">--</div>
+                </div>
+            </div>
+
+            <div class="panel-title">Explicación Cuantitativa y Razón de Decisión</div>
+            <div class="code-box" id="outExplanation">Esperando resultado...</div>
+        </div>
+    </div>
+
+    <!-- TAB 2: BACKTEST -->
+    <div id="tab-backtest" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>Simulador Histórico Barra a Barra (Instrucción 17)</span>
+            <span style="font-size: 12px; color: var(--text-muted);">División In-Sample (70%) vs Out-of-Sample (30%)</span>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Símbolo</label>
+                <select class="form-control" id="btSymbol">
+                    <option value="SPY">SPY</option>
+                    <option value="QQQ">QQQ</option>
+                    <option value="AAPL">AAPL</option>
+                    <option value="MSFT">MSFT</option>
+                    <option value="NVDA">NVDA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Barras Totales</label>
+                <input type="number" class="form-control" id="btBars" value="180" style="width: 100px;">
+            </div>
+            <div class="form-group">
+                <label>Partición In-Sample</label>
+                <input type="number" class="form-control" id="btRatio" value="0.70" step="0.05" style="width: 100px;">
+            </div>
+            <button class="btn btn-primary" onclick="runBacktest()">⚡ Ejecutar Backtest</button>
+        </div>
+
+        <div id="backtestOutput" style="display: none; margin-top: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-label">Sharpe Ratio</div>
+                    <div class="stat-value" id="btSharpe">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Sortino Ratio</div>
+                    <div class="stat-value" id="btSortino">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Max Drawdown</div>
+                    <div class="stat-value" id="btDrawdown" style="color: var(--yellow);">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Win Rate %</div>
+                    <div class="stat-value" id="btWinRate">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Profit Factor</div>
+                    <div class="stat-value" id="btProfitFactor">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">PnL Neto Total</div>
+                    <div class="stat-value" id="btNetPnl" style="color: var(--green);">--</div>
+                </div>
+            </div>
+
+            <div class="panel-title">Operaciones Auditadas (Últimas Operaciones)</div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Lado</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th>Cantidad</th>
+                            <th>PnL Bruto</th>
+                            <th>Comisiones</th>
+                            <th>PnL Neto</th>
+                            <th>Motivo Salida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="btTradesTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: JOURNAL -->
+    <div id="tab-journal" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>Diario Inmutable de Decisiones Cuantitativas</span>
+            <button class="btn btn-secondary" onclick="loadJournal()">Actualizar Diario</button>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Decision ID</th>
+                        <th>Fecha / Hora</th>
+                        <th>Símbolo</th>
+                        <th>Régimen</th>
+                        <th>Dirección</th>
+                        <th>Score</th>
+                        <th>Veredicto Riesgo</th>
+                        <th>Razones</th>
+                    </tr>
+                </thead>
+                <tbody id="journalTable">
+                    <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Cargando registros...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 4: WEEKEND SCANNER -->
+    <div id="tab-scanner" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>📅 Weekend Market Scanner — Preparación Pre-Market Institucional</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="btnRunScanner" onclick="runWeekendScan()">🚀 RUN WEEKEND SCAN</button>
+                <button class="btn btn-secondary" onclick="exportScanner('markdown')">📥 Exportar MD (12 Secciones)</button>
+                <button class="btn btn-secondary" onclick="exportScanner('json')">📦 Exportar JSON</button>
+                <button class="btn btn-secondary" onclick="loadScannerStatus()">🔄 Actualizar</button>
+            </div>
+        </div>
+
+        <div class="alert-box" id="scannerBanner">
+            <strong>Modo Análisis Exclusivamente:</strong> Este módulo escanea el mercado cerrado con datos verificables para la sesión del lunes. <strong>Cero órdenes emitidas.</strong>
+        </div>
+
+        <!-- SCANNER STATUS CARDS -->
+        <div class="grid-stats" style="margin-bottom: 16px;">
+            <div class="stat-card">
+                <div class="stat-label">Hora Mercado (EST / NY)</div>
+                <div class="stat-value" id="scTimeEst" style="font-size: 15px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Fin de Semana</div>
+                <div class="stat-value" id="scIsWeekend" style="font-size: 15px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Último Escaneo</div>
+                <div class="stat-value" id="scLastRun" style="font-size: 15px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Candidatos Detectados</div>
+                <div class="stat-value" id="scCandidatesCount" style="color: var(--accent-cyan); font-size: 20px;">--</div>
+            </div>
+        </div>
+
+        <!-- FILTROS DE CANDIDATOS -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Filtrar por Condición:</span>
+            <button class="btn btn-secondary" onclick="filterCandidates('ALL')" id="flt-ALL" style="background: var(--accent-blue); color: #fff;">Todos</button>
+            <button class="btn btn-secondary" onclick="filterCandidates('BREAKOUT_WATCH')" id="flt-BREAKOUT_WATCH">Breakouts</button>
+            <button class="btn btn-secondary" onclick="filterCandidates('MOMENTUM_WATCH')" id="flt-MOMENTUM_WATCH">Momentum</button>
+            <button class="btn btn-secondary" onclick="filterCandidates('MEAN_REVERSION_WATCH')" id="flt-MEAN_REVERSION_WATCH">Mean Reversion</button>
+            <button class="btn btn-secondary" onclick="filterCandidates('ORB_CANDIDATE')" id="flt-ORB_CANDIDATE">ORB</button>
+            <button class="btn btn-secondary" onclick="filterCandidates('TREND_CONTINUATION')" id="flt-TREND_CONTINUATION">Trend</button>
+        </div>
+
+        <!-- TABLA DE CANDIDATOS -->
+        <div class="panel-title" style="font-size: 14px;">1. Candidatos Detectados para la Watchlist</div>
+        <div class="table-responsive" style="margin-bottom: 24px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Símbolo</th>
+                        <th>Condición Detectada</th>
+                        <th>Régimen</th>
+                        <th>Último Cierre</th>
+                        <th>RSI (14)</th>
+                        <th>ATR (14)</th>
+                        <th>RS vs SPY</th>
+                        <th>Soporte / Pivot / Resistencia</th>
+                        <th>Opciones (&lt; $200)</th>
+                    </tr>
+                </thead>
+                <tbody id="scannerCandidatesTable">
+                    <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Sin datos cargados. Haz clic en 'RUN WEEKEND SCAN'.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ESCENARIOS PARA LA PRÓXIMA SESIÓN -->
+        <div class="panel-title" style="font-size: 14px;">2. Escenarios Alcistas / Bajistas &amp; Puntos de Invalidación</div>
+        <div id="scannerScenariosContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="color: var(--text-muted); font-size: 13px;">No hay escenarios disponibles.</div>
+        </div>
+
+        <!-- INFORME COMPLETO DE 12 SECCIONES -->
+        <div class="panel-title" style="font-size: 14px;">3. Informe Estructurado de Fin de Semana (12 Secciones)</div>
+        <pre class="code-box" id="scannerReportBox" style="max-height: 400px; white-space: pre-wrap; line-height: 1.4;">Sin informe generado aún.</pre>
+    </div>
+
+    <!-- TAB 5: MARKET SCHEDULE -->
+    <div id="tab-schedule" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>🕒 Market Schedule &amp; Automated Operating Hours — Estado Operativo 24/7</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="triggerScheduleTask('premarket_scan')">🌅 RUN PREMARKET SCAN</button>
+                <button class="btn btn-primary" onclick="triggerScheduleTask('weekend_scan')">🚀 RUN WEEKEND SCAN</button>
+                <button class="btn btn-primary" onclick="triggerScheduleTask('daily_report')">📈 RUN DAILY REPORT</button>
+                <button class="btn btn-secondary" onclick="loadScheduleStatus()">🔄 Refrescar Horarios</button>
+            </div>
+        </div>
+
+        <div class="alert-box box-success" id="scheduleBanner">
+            <strong>Orquestador 24/7 Activo:</strong> El horario bursátil supervisa el mercado de EE. UU. (America/New_York EST/EDT dinámico). Las estrategias respetan las ventanas de sesión mientras la infraestructura permanece activa 24/7.
+        </div>
+
+        <!-- STATS CARDS DE HORARIO -->
+        <div class="grid-stats" style="margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">Hora Local ET (America/New_York)</div>
+                <div class="stat-value" id="schTimeEt" style="font-size: 16px; color: var(--accent-cyan);">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Estado del Mercado</div>
+                <div class="stat-value" id="schMarketState" style="font-size: 16px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Próxima Apertura Regular</div>
+                <div class="stat-value" id="schNextOpen" style="font-size: 14px; color: var(--green);">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Próximo Cierre Regular</div>
+                <div class="stat-value" id="schNextClose" style="font-size: 14px; color: var(--yellow);">--</div>
+            </div>
+        </div>
+
+        <!-- DETALLES DE SESIÓN -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-label">Modo Operativo Activo</div>
+                <div style="font-size: 16px; font-weight: 700; margin-top: 4px;" id="schOperatingMode">ANALYSIS_ONLY</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Inviolable por diseño: Bloqueo de ejecuciones de riesgo.</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ventana de Sesión Actual</div>
+                <div style="font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--accent-cyan);" id="schWindowName">--</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="schWindowDesc">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Estado del Scheduler en Segundo Plano</div>
+                <div style="font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--green);" id="schSchedulerActive">ACTIVO 24/7</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Bucle de supervisión periódica continuo.</div>
+            </div>
+        </div>
+
+        <!-- REGISTRO DE TAREAS -->
+        <div class="panel-title" style="font-size: 14px;">Historial de Ejecuciones e Idempotencia de Tareas</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tarea ID</th>
+                        <th>Fecha Tarea</th>
+                        <th>Última Ejecución (ET)</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleExecutionsTable">
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Cargando historial de tareas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentKillSwitch = false;
+
+        async function loadAccountAndHealth() {
+            try {
+                const resH = await fetch('/health');
+                const dataH = await resH.json();
+                document.getElementById('badgeMode').innerText = dataH.trading_mode;
+                currentKillSwitch = dataH.kill_switch_active;
+                updateKillSwitchButton();
+
+                const resA = await fetch('/api/account');
+                const dataA = await resA.json();
+                document.getElementById('valEquity').innerText = '$' + dataA.account.equity.toLocaleString('en-US', {minimumFractionDigits: 2});
+                const pnl = dataA.account.realized_pnl || 0.0;
+                document.getElementById('valRealizedPnl').innerText = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+                document.getElementById('valPositions').innerText = dataA.positions.length + ' / 3';
+
+                const actBroker = dataA.active_broker || 'moomoo';
+                document.getElementById('brokerSelect').value = actBroker;
+                document.getElementById('badgeBroker').innerText = actBroker.toUpperCase() + (dataA.account.connected ? ' (EN VIVO)' : ' (SIMULADO)');
+            } catch (err) {
+                console.error("Error loading account/health:", err);
+            }
+        }
+
+        async function changeBroker() {
+            const b = document.getElementById('brokerSelect').value;
+            try {
+                const res = await fetch('/api/broker/switch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({broker: b})
+                });
+                await res.json();
+                await loadAccountAndHealth();
+            } catch (err) {
+                alert("Error al conmutar broker: " + err);
+            }
+        }
+
+        async function sendTelegramBalance() {
+            try {
+                const res = await fetch('/api/telegram/balance', {method: 'POST'});
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ Balance y posiciones enviadas con éxito a tu Telegram (@LaraMayaBot).");
+                } else {
+                    alert("⚠️ No se pudo enviar a Telegram. Verifica la configuración de tu bot.");
+                }
+            } catch (err) {
+                alert("Error enviando a Telegram: " + err);
+            }
+        }
+
+        async function testTelegram() {
+            try {
+                const res = await fetch('/api/telegram/test', {method: 'POST'});
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ ¡Mensaje de prueba recibido en Telegram! Conexión 100% activa.");
+                } else {
+                    alert("⚠️ Telegram respondió con error o las credenciales no son válidas.");
+                }
+            } catch (err) {
+                alert("Error: " + err);
+            }
+        }
+
+        function updateKillSwitchButton() {
+            const btn = document.getElementById('btnKillSwitch');
+            if (currentKillSwitch) {
+                btn.innerText = '⚠️ KILL SWITCH: ACTIVADO';
+                btn.className = 'btn btn-danger';
+                btn.style.boxShadow = '0 0 10px #ef4444';
+            } else {
+                btn.innerText = '🛡️ KILL SWITCH: INACTIVO';
+                btn.className = 'btn btn-secondary';
+                btn.style.boxShadow = 'none';
+            }
+        }
+
+        async function toggleKillSwitch() {
+            const nextState = !currentKillSwitch;
+            const confirmMsg = nextState 
+                ? '¿Confirmas la activación del Kill Switch de Emergencia? Se cancelarán y bloquearán todas las órdenes.' 
+                : '¿Deseas restaurar la operatividad normal del sistema?';
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const res = await fetch('/api/kill-switch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({active: nextState, reason: 'Intervención de operador en UI'})
+                });
+                const data = await res.json();
+                currentKillSwitch = data.kill_switch_active;
+                updateKillSwitchButton();
+            } catch (err) {
+                alert("Error al modificar Kill Switch: " + err);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+            
+            const evtTarget = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+            if (evtTarget && evtTarget.classList) evtTarget.classList.add('active');
+
+            if (tab === 'analyzer') {
+                document.getElementById('tab-analyzer').style.display = 'block';
+            } else if (tab === 'backtest') {
+                document.getElementById('tab-backtest').style.display = 'block';
+            } else if (tab === 'journal') {
+                document.getElementById('tab-journal').style.display = 'block';
+                loadJournal();
+            } else if (tab === 'scanner') {
+                document.getElementById('tab-scanner').style.display = 'block';
+                loadScannerStatus();
+            } else if (tab === 'schedule') {
+                document.getElementById('tab-schedule').style.display = 'block';
+                loadScheduleStatus();
+            }
+        }
+
+        async function loadScheduleStatus() {
+            try {
+                const res = await fetch('/api/schedule/status');
+                const data = await res.json();
+                document.getElementById('schTimeEt').innerText = data.current_time_et || '--';
+                
+                const st = data.market_state || 'UNKNOWN';
+                let color = 'var(--text-muted)';
+                if (st === 'REGULAR') color = 'var(--green)';
+                else if (st === 'PREMARKET') color = 'var(--accent-cyan)';
+                else if (st === 'AFTER_HOURS') color = 'var(--purple)';
+                else if (st === 'CLOSED' || st === 'HOLIDAY') color = 'var(--yellow)';
+                
+                document.getElementById('schMarketState').innerHTML = `<span class="badge" style="border: 1px solid ${color}; color: ${color};">${st}</span>`;
+                document.getElementById('schNextOpen').innerText = data.next_market_open_et || '--';
+                document.getElementById('schNextClose').innerText = data.next_market_close_et || '--';
+                document.getElementById('schOperatingMode').innerText = data.operating_mode || 'ANALYSIS_ONLY';
+                document.getElementById('schWindowName').innerText = data.window_name || '--';
+                document.getElementById('schWindowDesc').innerText = data.window_description || '--';
+                document.getElementById('schSchedulerActive').innerText = data.scheduler_active ? 'ACTIVO 24/7' : 'PAUSADO';
+
+                // Tabla de ejecuciones
+                const tbody = document.getElementById('scheduleExecutionsTable');
+                tbody.innerHTML = '';
+                const lastExecs = data.last_executions || {};
+                const keys = Object.keys(lastExecs);
+                if (keys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No hay ejecuciones registradas recientemente.</td></tr>';
+                    return;
+                }
+                keys.forEach(k => {
+                    const item = lastExecs[k];
+                    const row = document.createElement('tr');
+                    const stColor = item.status === 'SUCCESS' ? 'var(--green)' : 'var(--red)';
+                    row.innerHTML = `
+                        <td><strong>${k}</strong></td>
+                        <td>${item.date || '--'}</td>
+                        <td>${item.timestamp || '--'}</td>
+                        <td><span class="badge" style="border: 1px solid ${stColor}; color: ${stColor};">${item.status}</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Error al cargar estado del schedule:", err);
+            }
+        }
+
+        async function triggerScheduleTask(taskName) {
+            try {
+                const res = await fetch('/api/schedule/run-task', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({task_name: taskName, force: true})
+                });
+                const data = await res.json();
+                if (data.success || data.status === 'SUCCESS') {
+                    alert('✅ Tarea ' + taskName + ' ejecutada correctamente.');
+                    await loadScheduleStatus();
+                } else {
+                    alert('⚠️ Ejecución de tarea: ' + (data.message || data.error || data.status));
+                }
+            } catch (err) {
+                alert('Error al ejecutar tarea: ' + err);
+            }
+        }
+
+        async function runAnalysis() {
+            const symbol = document.getElementById('anSymbol').value;
+            const bars = parseInt(document.getElementById('anBars').value);
+            const regime = document.getElementById('anRegime').value;
+            const earnings = document.getElementById('anEarnings').value === 'true';
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        bars_count: bars,
+                        regime: regime,
+                        has_earnings_today: earnings
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('analysisOutput').style.display = 'block';
+
+                const alertBox = document.getElementById('analysisAlert');
+                const pResult = data.result;
+                const exp = data.explanation;
+
+                if (pResult.status === 'APPROVED') {
+                    alertBox.className = 'alert-box box-success';
+                    alertBox.innerHTML = `<strong>OPERACIÓN APROBADA:</strong> ${exp.summary}`;
+                } else if (pResult.status === 'CONFIRMATION_REJECTED') {
+                    alertBox.className = 'alert-box box-warning';
+                    alertBox.innerHTML = `<strong>BLOQUEO DE SEGURIDAD / CONFIRMACIÓN:</strong> ${pResult.reason}`;
+                } else {
+                    alertBox.className = 'alert-box box-danger';
+                    alertBox.innerHTML = `<strong>NO-TRADE:</strong> ${pResult.reason || exp.summary}`;
+                }
+
+                document.getElementById('outScore').innerText = (pResult.score || 0).toFixed(1) + ' / 100';
+                document.getElementById('outRegime').innerText = 'Régimen: ' + (pResult.market_regime || 'DESCONOCIDO');
+
+                if (pResult.entry_price) {
+                    document.getElementById('outRiskParams').innerHTML = `
+                        <strong>Dirección:</strong> ${pResult.direction}<br>
+                        <strong>Entrada:</strong> $${pResult.entry_price.toFixed(2)} | <strong>Cantidad:</strong> ${pResult.quantity} acc.<br>
+                        <strong>Stop Loss:</strong> $${pResult.stop_loss.toFixed(2)} | <strong>Take Profit:</strong> $${pResult.take_profit.toFixed(2)}<br>
+                        <strong>Ratio R:R:</strong> 1:${pResult.rr_ratio}
+                    `;
+                } else {
+                    document.getElementById('outRiskParams').innerHTML = '<em>Sin asignación de capital (Condición No-Trade activa).</em>';
+                }
+
+                if (pResult.option_contract) {
+                    const opt = pResult.option_contract;
+                    document.getElementById('outOptionParams').innerHTML = `
+                        <strong>Tipo:</strong> ${opt.option_type} Strike $${opt.strike_price.toFixed(2)}<br>
+                        <strong>Vencimiento:</strong> ${opt.expiration_date} (${opt.days_to_expiration} DTE)<br>
+                        <strong>Costo Estimado:</strong> $${opt.total_contract_cost.toFixed(2)} USD (Máx permitido: $${opt.max_budget_usd.toFixed(2)})
+                    `;
+                } else {
+                    document.getElementById('outOptionParams').innerHTML = '<em>No aplicable para esta evaluación.</em>';
+                }
+
+                document.getElementById('outExplanation').innerText = JSON.stringify(exp, null, 2);
+                loadAccountAndHealth();
+            } catch (err) {
+                alert("Error en análisis: " + err);
+            }
+        }
+
+        async function runBacktest() {
+            const symbol = document.getElementById('btSymbol').value;
+            const bars = parseInt(document.getElementById('btBars').value);
+            const ratio = parseFloat(document.getElementById('btRatio').value);
+
+            try {
+                const res = await fetch('/api/backtest', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        bars_count: bars,
+                        regime: 'BULL_TREND',
+                        train_ratio: ratio
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('backtestOutput').style.display = 'block';
+
+                const oosMetrics = data.out_of_sample.metrics;
+                document.getElementById('btSharpe').innerText = oosMetrics.sharpe_ratio.toFixed(2);
+                document.getElementById('btSortino').innerText = oosMetrics.sortino_ratio.toFixed(2);
+                document.getElementById('btDrawdown').innerText = oosMetrics.max_drawdown_pct.toFixed(2) + '%';
+                document.getElementById('btWinRate').innerText = oosMetrics.win_rate_pct.toFixed(1) + '%';
+                document.getElementById('btProfitFactor').innerText = oosMetrics.profit_factor.toFixed(2);
+                const net = oosMetrics.total_net_pnl;
+                document.getElementById('btNetPnl').innerText = (net >= 0 ? '+' : '') + '$' + net.toFixed(2);
+
+                const tbody = document.getElementById('btTradesTable');
+                tbody.innerHTML = '';
+                const allTrades = [...data.in_sample.trades, ...data.out_of_sample.trades];
+                if (allTrades.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No se generaron operaciones en la simulación.</td></tr>';
+                } else {
+                    allTrades.forEach(t => {
+                        const row = document.createElement('tr');
+                        const pnlColor = t.net_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+                        row.innerHTML = `
+                            <td>${t.trade_id}</td>
+                            <td><strong>${t.side}</strong></td>
+                            <td>$${t.entry_price.toFixed(2)}</td>
+                            <td>$${t.exit_price.toFixed(2)}</td>
+                            <td>${t.quantity}</td>
+                            <td>$${t.gross_pnl.toFixed(2)}</td>
+                            <td>$${t.commission.toFixed(2)}</td>
+                            <td style="color: ${pnlColor}; font-weight: 700;">$${t.net_pnl.toFixed(2)}</td>
+                            <td>${t.exit_reason}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                alert("Error ejecutando backtest: " + err);
+            }
+        }
+
+        async function loadJournal() {
+            try {
+                const res = await fetch('/api/journal?limit=25');
+                const data = await res.json();
+                const tbody = document.getElementById('journalTable');
+                tbody.innerHTML = '';
+
+                if (data.records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Sin decisiones registradas aún.</td></tr>';
+                    return;
+                }
+
+                data.records.forEach(r => {
+                    const row = document.createElement('tr');
+                    const verdictColor = r.risk_decision === 'APPROVED' ? 'var(--green)' : 'var(--red)';
+                    row.innerHTML = `
+                        <td><code>${r.decision_id}</code></td>
+                        <td>${new Date(r.timestamp).toLocaleString()}</td>
+                        <td><strong>${r.symbol}</strong></td>
+                        <td><span class="badge badge-cyan">${r.market_regime}</span></td>
+                        <td>${r.signal_direction}</td>
+                        <td>${r.signal_score.toFixed(1)}</td>
+                        <td style="color: ${verdictColor}; font-weight: 700;">${r.risk_decision}</td>
+                        <td style="max-width: 300px; font-size: 11px; color: var(--text-muted);">${r.reasons.join(' | ')}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Error loading journal:", err);
+            }
+        }
+
+        let allCandidates = [];
+        let currentCandidateFilter = 'ALL';
+
+        async function loadScannerStatus() {
+            try {
+                // 1. Get status
+                const resSt = await fetch('/api/scanner/status');
+                const st = await resSt.json();
+                document.getElementById('scTimeEst').innerText = st.current_time_est || '--';
+                document.getElementById('scIsWeekend').innerText = st.is_weekend ? '🟢 SÍ (Fin de Semana)' : '⚪ NO (Día Hábil)';
+                document.getElementById('scLastRun').innerText = (st.last_run_date ? st.last_run_date : 'Ninguno') + ' (' + (st.last_run_status || 'PENDING') + ')';
+
+                // 2. Get latest report
+                const resRep = await fetch('/api/scanner/latest');
+                const repData = await resRep.json();
+
+                if (!repData.has_report || !repData.report) {
+                    document.getElementById('scCandidatesCount').innerText = '0';
+                    document.getElementById('scannerCandidatesTable').innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Sin datos guardados. Presiona "RUN WEEKEND SCAN".</td></tr>';
+                    document.getElementById('scannerScenariosContainer').innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No hay escenarios cargados.</div>';
+                    document.getElementById('scannerReportBox').innerText = 'Sin informe disponible.';
+                    return;
+                }
+
+                const report = repData.report;
+                allCandidates = report.candidates || [];
+                document.getElementById('scCandidatesCount').innerText = allCandidates.length;
+
+                renderCandidatesTable();
+                renderScenarios(allCandidates);
+
+                // Fetch markdown format for the report box
+                const resMd = await fetch('/api/scanner/export?format=markdown');
+                if (resMd.ok) {
+                    const mdText = await resMd.text();
+                    document.getElementById('scannerReportBox').innerText = mdText;
+                } else {
+                    document.getElementById('scannerReportBox').innerText = JSON.stringify(report, null, 2);
+                }
+            } catch (err) {
+                console.error("Error loading scanner status:", err);
+            }
+        }
+
+        async function runWeekendScan() {
+            const btn = document.getElementById('btnRunScanner');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Escaneando Mercado...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/scanner/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({force: true, send_telegram: true})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert("✅ Escaneo de fin de semana completado con éxito. Resumen enviado a Telegram.");
+                    await loadScannerStatus();
+                } else {
+                    alert("⚠️ Escaneo no completado: " + (data.reason || data.error || 'Error desconocido'));
+                }
+            } catch (err) {
+                alert("Error ejecutando escaneo: " + err);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function filterCandidates(filter) {
+            currentCandidateFilter = filter;
+            ['ALL', 'BREAKOUT_WATCH', 'MOMENTUM_WATCH', 'MEAN_REVERSION_WATCH', 'ORB_CANDIDATE', 'TREND_CONTINUATION'].forEach(f => {
+                const b = document.getElementById('flt-' + f);
+                if (b) {
+                    if (f === filter) {
+                        b.style.background = 'var(--accent-blue)';
+                        b.style.color = '#fff';
+                    } else {
+                        b.style.background = 'var(--bg-card)';
+                        b.style.color = 'var(--text-main)';
+                    }
+                }
+            });
+            renderCandidatesTable();
+        }
+
+        function renderCandidatesTable() {
+            const tbody = document.getElementById('scannerCandidatesTable');
+            tbody.innerHTML = '';
+
+            const filtered = (currentCandidateFilter === 'ALL')
+                ? allCandidates
+                : allCandidates.filter(c => c.primary_condition === currentCandidateFilter);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No hay candidatos que coincidan con el filtro seleccionado.</td></tr>';
+                return;
+            }
+
+            filtered.forEach(c => {
+                const row = document.createElement('tr');
+                let badgeColor = 'var(--text-muted)';
+                if (c.primary_condition.includes('BREAKOUT')) badgeColor = 'var(--green)';
+                else if (c.primary_condition.includes('MOMENTUM')) badgeColor = 'var(--accent-cyan)';
+                else if (c.primary_condition.includes('MEAN_REVERSION')) badgeColor = 'var(--purple)';
+                else if (c.primary_condition.includes('ORB')) badgeColor = 'var(--yellow)';
+
+                const price = (c.last_historical_price ?? c.last_price ?? 0);
+                const reg = (c.market_regime ?? c.regime ?? 'N/A');
+                const s = (c.key_support ?? c.support_level ?? 0);
+                const p = (c.pivot_point ?? c.pivot_level ?? 0);
+                const r = (c.key_resistance ?? c.resistance_level ?? 0);
+                const rs = (c.relative_strength_vs_spy ?? c.relative_strength_spy ?? 1.0);
+                const opt = c.options_candidate_contract;
+
+                const optsCount = opt
+                    ? `<span style="color: var(--green); font-weight: 700;">${opt.contract_type} $${opt.strike}</span>`
+                    : '<span style="color: var(--text-muted);">N/A</span>';
+
+                row.innerHTML = `
+                    <td><strong>${c.symbol}</strong></td>
+                    <td><span class="badge" style="border: 1px solid ${badgeColor}; color: ${badgeColor};">${c.primary_condition}</span></td>
+                    <td><span class="badge badge-cyan">${reg}</span></td>
+                    <td><strong>$${price.toFixed(2)}</strong></td>
+                    <td>${(c.rsi_14 ?? 50).toFixed(1)}</td>
+                    <td>$${(c.atr_14 ?? 1.5).toFixed(2)}</td>
+                    <td>${rs.toFixed(2)}x</td>
+                    <td style="font-size: 11px;">S: $${s.toFixed(2)} | P: $${p.toFixed(2)} | R: $${r.toFixed(2)}</td>
+                    <td>${optsCount}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderScenarios(candidates) {
+            const container = document.getElementById('scannerScenariosContainer');
+            container.innerHTML = '';
+
+            if (!candidates || candidates.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No hay escenarios cargados.</div>';
+                return;
+            }
+
+            candidates.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                card.style.background = 'var(--bg-card)';
+                card.style.padding = '14px';
+
+                const price = (c.last_historical_price ?? c.last_price ?? 0);
+                const opt = c.options_candidate_contract;
+                let optsHtml = '';
+                if (opt) {
+                    optsHtml = '<div style="margin-top: 8px; font-size: 11px; color: #a5f3fc; border-top: 1px solid var(--border); padding-top: 6px;">' +
+                        `<strong>Opción bajo $200:</strong> ${opt.contract_type} Strike $${opt.strike.toFixed(2)} exp ${opt.expiry} (~$${opt.total_contract_cost.toFixed(2)} USD)` +
+                        '</div>';
+                }
+
+                const bullTrig = c.bullish_scenario ? (c.bullish_scenario.trigger_level ?? c.bullish_scenario.trigger_price ?? 0) : 0;
+                const bullInval = c.bullish_scenario ? (c.bullish_scenario.invalidation_level ?? 0) : 0;
+                const bullDesc = c.bullish_scenario ? (c.bullish_scenario.rationale ?? c.bullish_scenario.description ?? 'N/A') : 'N/A';
+                const bullConf = c.bullish_scenario ? (c.bullish_scenario.required_confirmation ?? 'N/A') : 'N/A';
+
+                const bearTrig = c.bearish_scenario ? (c.bearish_scenario.trigger_level ?? c.bearish_scenario.trigger_price ?? 0) : 0;
+                const bearInval = c.bearish_scenario ? (c.bearish_scenario.invalidation_level ?? 0) : 0;
+                const bearDesc = c.bearish_scenario ? (c.bearish_scenario.rationale ?? c.bearish_scenario.description ?? 'N/A') : 'N/A';
+                const bearConf = c.bearish_scenario ? (c.bearish_scenario.required_confirmation ?? 'N/A') : 'N/A';
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 16px; color: var(--accent-cyan);">${c.symbol}</span>
+                        <span class="badge badge-mode">$${price.toFixed(2)}</span>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Condición:</span> <strong>${c.primary_condition}</strong><br>
+                        <span style="color: var(--text-muted);">Estrategias:</span> ${c.applicable_strategies.join(', ')}
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid var(--green); padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 12px;">
+                        <strong style="color: var(--green);">🟢 Escenario Alcista:</strong> ${bullDesc}<br>
+                        <span style="font-size: 11px; color: var(--text-muted);">Gatillo: $${bullTrig.toFixed(2)} | Inval: $${bullInval.toFixed(2)}</span><br>
+                        <span style="font-size: 10px; color: #38bdf8;">Confirmación: ${bullConf}</span><br>
+                        <span style="font-size: 10px; color: #f59e0b;">Invalidación: ${c.bullish_scenario?.invalidation_condition || 'N/A'}</span>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--red); padding: 8px; border-radius: 4px; font-size: 12px;">
+                        <strong style="color: var(--red);">🔴 Escenario Bajista:</strong> ${bearDesc}<br>
+                        <span style="font-size: 11px; color: var(--text-muted);">Gatillo: $${bearTrig.toFixed(2)} | Inval: $${bearInval.toFixed(2)}</span><br>
+                        <span style="font-size: 10px; color: #38bdf8;">Confirmación: ${bearConf}</span><br>
+                        <span style="font-size: 10px; color: #f59e0b;">Invalidación: ${c.bearish_scenario?.invalidation_condition || 'N/A'}</span>
+                    </div>
+                    ${optsHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function exportScanner(format) {
+            window.open('/api/scanner/export?format=' + format, '_blank');
+        }
+
+        window.onload = function() {
+            loadAccountAndHealth();
+        };
+    </script>
+</body>
+</html>

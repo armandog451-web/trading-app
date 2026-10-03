@@ -51,3 +51,26 @@ async def send_mt5_telegram_report(payload: dict):
     """Envía un reporte de resultados de MT5 por Telegram."""
     return await mt5_backtest_engine.send_telegram_backtest_report(payload)
 
+@router.post("/weekend/run")
+async def run_weekend_optimization_route():
+    """Ejecuta el módulo cuantitativo de fin de semana, recalibra ML y despacha reporte a Telegram."""
+    import sys
+    from pathlib import Path
+    root_path = Path(__file__).resolve().parent.parent.parent.parent
+    if str(root_path) not in sys.path:
+        sys.path.insert(0, str(root_path))
+    from weekend_engine import weekend_engine
+    return await weekend_engine.run_weekend_optimization(send_telegram=True)
+
+@router.get("/weekend/report")
+async def get_weekend_report_route():
+    """Devuelve el último reporte generado por el motor de fin de semana."""
+    import sys
+    from pathlib import Path
+    root_path = Path(__file__).resolve().parent.parent.parent.parent
+    if str(root_path) not in sys.path:
+        sys.path.insert(0, str(root_path))
+    from weekend_engine import weekend_engine
+    return weekend_engine.last_report or {"status": "none", "message": "No hay optimizaciones de fin de semana registradas aún."}
+
+

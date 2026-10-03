@@ -30,12 +30,22 @@ async def lifespan(app: FastAPI):
     telegram_listener.start()
     position_guardian.start()
     
+    # Iniciar programador automático de fin de semana (Domingo 18:00 EST / Inicial)
+    import sys
+    from pathlib import Path
+    root_path = Path(__file__).resolve().parent.parent.parent
+    if str(root_path) not in sys.path:
+        sys.path.insert(0, str(root_path))
+    from weekend_engine import weekend_engine
+    weekend_engine.start_auto_scheduler()
+
     # Auto-start bot runner to fulfill the user's 24/7 autonomous requirement
     import asyncio
     asyncio.create_task(bot_runner.start())
     
     yield
     logger.info("Deteniendo motor...")
+    weekend_engine.stop_auto_scheduler()
     telegram_listener.stop()
     position_guardian.stop()
     if bot_runner.is_running:

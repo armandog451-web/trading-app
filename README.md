@@ -24,6 +24,11 @@ Motor de trading algorítmico profesional para cuentas Demo (**Moomoo OpenD** y 
    * Botones en vivo: `[✅ Ejecutar Orden]` y `[❌ Descartar]`.
 5. **Panel de Control Web Moderno:**
    * Corre localmente en `http://localhost:8050` con gráficos de TradingView en vivo, métricas de cuenta y control en 1 clic.
+6. **Módulo de Fin de Semana: Backtesting, Calibración ML y Plan Lunes:**
+   * **Simulación Cuantitativa:** Evalúa automáticamente los últimos 5 días de mercado en las 4 estrategias centrales sobre toda la watchlist.
+   * **Recalibración de Pesos ML:** Ajusta en la base de datos SQLite la ponderación algorítmica de cada estrategia para priorizar las más efectivas.
+   * **Alpha Watchlist Lunes:** Calcula niveles técnicos (Soporte S1, Pivote, Resistencia R1) y sesgo institucional para la campana de apertura.
+   * **Disparo Flexible:** Desde el panel web con un clic, o desde Telegram enviando `/findesemana` o `/backtest` a `@LaraMayaBot`.
 
 ---
 

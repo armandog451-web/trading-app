@@ -313,6 +313,28 @@
                     </div>
                 </div>
 
+                <!-- MODULE: WEEKEND OPTIMIZATION & MACHINE LEARNING RECALIBRATION -->
+                <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-purple-900/40">
+                    <div class="px-4 py-3 bg-gradient-to-r from-purple-950/60 to-gray-900 border-b border-gray-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-check text-amber-400"></i>
+                            <h2 class="font-bold text-sm text-white">Fin de Semana: Backtest & Recalibración ML</h2>
+                        </div>
+                        <span class="text-[11px] px-2 py-0.5 rounded bg-amber-900/40 text-amber-300 border border-amber-500/30">Lunes Alpha</span>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Ejecuta backtesting de la última semana de mercado, recalibra los pesos cuantitativos del bot y proyecta la Watchlist para la campana de apertura del lunes.
+                        </p>
+                        <button id="btnRunWeekend" onclick="runWeekendOptimization()" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md transition">
+                            <i class="fa-solid fa-bolt"></i> Ejecutar Calibración & Enviar Reporte Telegram
+                        </button>
+                        <div id="weekendStatusBox" class="hidden bg-gray-900/90 rounded-lg p-3 border border-gray-800 text-[11px] space-y-1">
+                            <!-- Results injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- MODULE: TELEGRAM DIRECT CHANNEL -->
                 <div class="card-bg rounded-xl overflow-hidden shadow-lg border border-gray-800">
                     <div class="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
@@ -620,6 +642,44 @@
                 fetchStatus();
                 loadLogs();
             }, 1000);
+        }
+
+        async function runWeekendOptimization() {
+            const btn = document.getElementById('btnRunWeekend');
+            const box = document.getElementById('weekendStatusBox');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando Backtest y Recalibración ML...';
+            showToast('Iniciando optimización de fin de semana...');
+            try {
+                const res = await fetch('/api/weekend/optimize', {method: 'POST'});
+                const data = await res.json();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Ejecutar Calibración & Enviar Reporte Telegram';
+                if (data.status === 'success') {
+                    showToast('✅ Optimización y reporte a Telegram completados');
+                    box.classList.remove('hidden');
+                    const wr = data.backtest_summary.global_win_rate;
+                    const trades = data.backtest_summary.total_trades;
+                    const pnl = data.backtest_summary.total_net_pnl;
+                    box.innerHTML = `
+                        <div class="flex items-center justify-between text-emerald-400 font-semibold">
+                            <span>Backtest Semanal Completado</span>
+                            <span>WinRate: ${wr}% (${trades} trades)</span>
+                        </div>
+                        <div class="text-gray-300">PnL Simulado: <span class="${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-mono font-bold">$${pnl.toLocaleString()} USD</span></div>
+                        <div class="text-purple-300 text-[10px]">Pesos ML actualizados en BD y reporte enviado al bot de Telegram.</div>
+                    `;
+                    loadStrategies();
+                    loadLogs();
+                } else {
+                    showToast('Error: ' + (data.message || 'Falló la optimización'));
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Ejecutar Calibración & Enviar Reporte Telegram';
+                showToast('Error de red ejecutando optimización');
+            }
         }
 
         async function executeOrder(id) {

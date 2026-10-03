@@ -217,11 +217,23 @@ class TelegramService:
                                 elif raw_text in ['/latencia', '/latency', '/ping']:
                                     result = latency_guardian.check_and_optimize()
                                     await latency_guardian._send_latency_alert(result)
+                                elif raw_text in ['/findesemana', '/weekend', '/backtest', '/optimizar', '/planlunes']:
+                                    await client.post(
+                                        f'https://api.telegram.org/bot{self.bot_token}/sendMessage',
+                                        json={
+                                            'chat_id': chat,
+                                            'text': '⏳ *Iniciando Módulo de Fin de Semana...*\n\nDescargando datos históricos de la semana, ejecutando simulación multiestrategia y recalibrando pesos de Machine Learning. En breve recibirás el informe completo.',
+                                            'parse_mode': 'Markdown'
+                                        }
+                                    )
+                                    from weekend_engine import weekend_engine
+                                    asyncio.create_task(weekend_engine.run_weekend_optimization(send_telegram=True))
                                 elif raw_text in ['/start', '/ayuda']:
                                     reply = (
                                         '🤖 *Bienvenido a AlgortimTrading Robot v2.0*\n\n'
                                         'Estoy conectado a tu Dashboard de Trading.\n'
                                         '• Usa `/saldo` o `/balance` para ver tu capital y posiciones.\n'
+                                        '• Usa `/findesemana` o `/backtest` para recalibrar el bot y ver el plan del lunes.\n'
                                         '• Usa `/latencia` o `/ping` para medir latencia de red.\n'
                                         '• Te enviaré aquí cada oportunidad cuantitativa para aprobarla con 1 clic.'
                                     )

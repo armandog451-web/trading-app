@@ -1,0 +1,52 @@
+timezone: "America/New_York"
+
+market:
+  name: "US Equity Market (NYSE/NASDAQ)"
+  default_open: "09:30"
+  default_close: "16:00"
+  premarket_start: "04:00"
+  after_hours_end: "20:00"
+
+schedule_windows:
+  infrastructure_24_7:
+    enabled: true
+    health_check_interval_sec: 30
+    log_cleanup_interval_sec: 3600
+
+  nightly_preparation:
+    start_time: "18:00"
+    end_time: "19:00"
+    description: "Análisis de preparación previa para días de negociación (Domingo a Jueves)"
+
+  premarket_preparation:
+    start_time: "07:00"
+    end_time: "09:20"
+    report_trigger: "09:20"
+    description: "Detección de Gaps, RVOL, niveles técnicos y eventos corporativos"
+
+  opening_and_orb:
+    start_time: "09:20"
+    end_time: "10:30"
+    description: "Monitoreo de volatilidad inicial y estrategias Opening Range Breakout"
+
+  regular_session:
+    start_time: "10:30"
+    end_time: "15:30"
+    strategy_eval_interval_sec: 60
+    data_ingestion_interval_sec: 5
+    description: "Evaluación de estrategias de tendencia, reversión a la media y flujo"
+
+  closing_preparation:
+    start_time: "15:30"
+    end_time: "16:15"
+    description: "Auto-Square Off intradía, revisión de PnL y registro de salidas"
+
+  post_close_review:
+    start_time: "16:15"
+    end_time: "17:00"
+    description: "Cálculo de métricas diarias, sincronización de journal e informe ejecutivo"
+
+weekend_scanner:
+  saturday_scan_time: "09:00"
+  sunday_update_time: "17:00"
+  description: "Escaneo semanal de watchlist, régimen de mercado y planes pre-apertura"

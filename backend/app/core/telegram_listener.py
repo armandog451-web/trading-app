@@ -150,6 +150,42 @@ class TelegramListener:
             except Exception as e:
                 logger.error(f"Error respondiendo comando balance en Telegram: {e}")
 
+        elif text in ("/findesemana", "/weekend", "/backtest", "/optimizar", "/planlunes"):
+            try:
+                await client.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": "⏳ *Iniciando Módulo de Fin de Semana...*\n\nDescargando datos históricos de la semana, ejecutando simulación multiestrategia y recalibrando pesos de Machine Learning. En breve recibirás el informe completo.",
+                        "parse_mode": "Markdown"
+                    }
+                )
+                # Ejecutar el motor de fin de semana
+                import sys
+                from pathlib import Path
+                root_path = Path(__file__).resolve().parent.parent.parent.parent
+                if str(root_path) not in sys.path:
+                    sys.path.insert(0, str(root_path))
+                from weekend_engine import weekend_engine
+                asyncio.create_task(weekend_engine.run_weekend_optimization(send_telegram=True))
+            except Exception as e:
+                logger.error(f"Error ejecutando optimización de fin de semana: {e}")
+
+        elif text in ("/start", "/ayuda", "/help"):
+            help_msg = (
+                "🤖 *TradePulse Quantitative Engine v2.0*\n\n"
+                "• `/balance` o `/saldo` : Consulta de saldo y posiciones en tiempo real.\n"
+                "• `/findesemana` o `/backtest` : Ejecuta la optimización y recalibración ML de fin de semana.\n"
+                "• Alertas interactivas con botones `[✅ Ejecutar]` y `[❌ Descartar]` para aprobación en 1 toque."
+            )
+            try:
+                await client.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={"chat_id": chat_id, "text": help_msg, "parse_mode": "Markdown"}
+                )
+            except Exception as e:
+                logger.error(f"Error enviando ayuda Telegram: {e}")
+
     async def _handle_callback_query(self, cb_query: dict, token: str, client: httpx.AsyncClient):
         """Maneja el evento cuando el usuario presiona un botón interactivo en Telegram."""
         cb_id = cb_query.get("id")
