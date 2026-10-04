@@ -120,3 +120,11 @@ class StrategyComplexityCalculator:
 
         complexity_score = min(100.0, round(base_complexity + trade_penalty, 2))
         return complexity_score
+
+
+class FailureAnalysisRecord(BaseModel):
+    failure_type: str
+    evidence: str
+    severity: str  # HIGH, MEDIUM, LOW
+    suspected_cause: str
+    suggested_change: str

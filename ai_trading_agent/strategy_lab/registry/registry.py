@@ -40,13 +40,13 @@ class StrategyRegistry:
             strat.created_at.isoformat(),
             strat.updated_at.isoformat(),
             strat.status.value,
-            json.dumps(strat.universe),
-            json.dumps(strat.timeframes),
-            json.dumps(strat.parameters),
-            json.dumps(strat.rules),
+            json.dumps(strat.universe, default=str),
+            json.dumps(strat.timeframes, default=str),
+            json.dumps(strat.parameters, default=str),
+            json.dumps(strat.rules, default=str),
             strat.robustness_score,
             strat.strategy_score,
-            json.dumps(strat.metrics)
+            json.dumps(strat.metrics, default=str)
         ))
         conn.commit()
         conn.close()

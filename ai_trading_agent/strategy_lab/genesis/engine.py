@@ -5,7 +5,7 @@ Strategy Genesis Engine & Hypothesis Engine.
 Genera hipótesis cuantitativas y crea/muta estrategias de forma autónoma con trazabilidad de linaje.
 """
 
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime
 import uuid
 
@@ -114,19 +114,40 @@ class StrategyGenesisEngine:
         self,
         parent: LabStrategyDefinition,
         mutation_reason: str,
-        experiment_id: str = ""
+        experiment_id: str = "",
+        failure_analysis: Optional[Any] = None
     ) -> Tuple[LabStrategyDefinition, StrategyLineage]:
         """Genera una variante hija mutando parámetros controladamente y registrando el linaje."""
         new_version_num = round(float(parent.version) + 0.1, 1)
         child_id = f"{parent.strategy_id.rsplit('-v', 1)[0]}-v{new_version_num}"
 
-        # Mutación controlada de parámetros
+        # Mutación controlada de parámetros guiada por el diagnóstico de fallos si existe
         new_params = parent.parameters.copy()
-        if "min_rvol" in new_params:
-            new_params["min_rvol"] = round(new_params["min_rvol"] * 1.1, 2)  # Ajuste defensivo +10% RVOL
-        if "rr_target" in new_params:
-            new_params["rr_target"] = round(new_params["rr_target"] + 0.2, 1)  # Incrementar objetivo R:R
+        mutation_details = []
 
+        if failure_analysis and hasattr(failure_analysis, "failure_type"):
+            ftype = failure_analysis.failure_type
+            if ftype == "EXCESSIVE_DRAWDOWN":
+                new_params["atr_stop_mult"] = round(new_params.get("atr_stop_mult", 1.5) * 1.2, 2)
+                mutation_details.append(f"atr_stop_mult={new_params['atr_stop_mult']} (+20% por Drawdown Excesivo)")
+            elif ftype in ["INSUFFICIENT_PROFIT_FACTOR", "LOW_EXPECTANCY"]:
+                new_params["rr_target"] = round(new_params.get("rr_target", 2.0) + 0.3, 1)
+                mutation_details.append(f"rr_target={new_params['rr_target']} (+0.3 R:R por Expectancia Baja)")
+            elif ftype == "HIGH_SLIPPAGE_SENSITIVITY":
+                new_params["min_rvol"] = round(new_params.get("min_rvol", 1.2) * 1.15, 2)
+                mutation_details.append(f"min_rvol={new_params['min_rvol']} (+15% RVOL por Fricción)")
+            else:
+                new_params["min_rvol"] = round(new_params.get("min_rvol", 1.2) * 1.1, 2)
+                new_params["rr_target"] = round(new_params.get("rr_target", 2.0) + 0.2, 1)
+                mutation_details.append("min_rvol +10%, rr_target +0.2")
+        else:
+            if "min_rvol" in new_params:
+                new_params["min_rvol"] = round(new_params["min_rvol"] * 1.1, 2)
+            if "rr_target" in new_params:
+                new_params["rr_target"] = round(new_params["rr_target"] + 0.2, 1)
+            mutation_details.append(f"min_rvol={new_params.get('min_rvol')}, rr_target={new_params.get('rr_target')}")
+
+        mutation_desc = f"Mutación guiada: {', '.join(mutation_details)}"
         now = datetime.utcnow()
         child = LabStrategyDefinition(
             strategy_id=child_id,
@@ -147,7 +168,7 @@ class StrategyGenesisEngine:
         lineage = StrategyLineage(
             parent_id=parent.strategy_id,
             child_id=child_id,
-            mutation_description=f"Mutado min_rvol={new_params.get('min_rvol')} y rr_target={new_params.get('rr_target')}",
+            mutation_description=mutation_desc,
             reason=mutation_reason,
             experiment_id=experiment_id,
             created_at=now

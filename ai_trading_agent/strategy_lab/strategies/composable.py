@@ -50,9 +50,10 @@ class ComposableStrategy(BaseStrategy):
     ) -> StrategySignal:
         if not bars or len(bars) < 20:
             return StrategySignal(
-                strategy_name=self.name,
+                strategy_id=self.strategy_id,
+                strategy_version=self.version,
                 symbol=symbol,
-                direction=SignalDirection.NONE,
+                direction=SignalDirection.NO_TRADE,
                 score=0.0,
                 reasons=["Histórico insuficiente"],
                 timestamp=bars[-1].timestamp if bars else datetime.utcnow()
@@ -61,9 +62,10 @@ class ComposableStrategy(BaseStrategy):
         # 1. Filtro de Régimen de Mercado
         if regime.value not in self.allowed_regimes:
             return StrategySignal(
-                strategy_name=self.name,
+                strategy_id=self.strategy_id,
+                strategy_version=self.version,
                 symbol=symbol,
-                direction=SignalDirection.NONE,
+                direction=SignalDirection.NO_TRADE,
                 score=0.0,
                 reasons=[f"Régimen no permitido: {regime.value}"],
                 timestamp=bars[-1].timestamp
@@ -75,12 +77,12 @@ class ComposableStrategy(BaseStrategy):
         rvol = indicators.get("rvol", 1.0)
         vwap = indicators.get("vwap", close)
         atr = indicators.get("atr", close * 0.01)
-        ema9 = indicators.get("ema_9", close)
-        ema21 = indicators.get("ema_21", close)
+        ema9 = indicators.get("ema9") if indicators.get("ema9") is not None else indicators.get("ema_9", close)
+        ema21 = indicators.get("ema21") if indicators.get("ema21") is not None else indicators.get("ema_21", close)
 
         reasons = []
         score = 50.0
-        direction = SignalDirection.NONE
+        direction = SignalDirection.NO_TRADE
 
         # 2. Evaluación de Condiciones de Entrada (Modular)
         is_long_setup = (ema9 > ema21) and (close > vwap) and (rvol >= self.min_rvol) and (rsi >= self.min_rsi and rsi <= self.max_rsi)
@@ -96,9 +98,10 @@ class ComposableStrategy(BaseStrategy):
             reasons.append(f"Setup Bajista Compuesto: EMA9 ({ema9:.2f}) < EMA21 ({ema21:.2f}) | RVOL: {rvol:.2f} | RSI: {rsi:.1f}")
         else:
             return StrategySignal(
-                strategy_name=self.name,
+                strategy_id=self.strategy_id,
+                strategy_version=self.version,
                 symbol=symbol,
-                direction=SignalDirection.NONE,
+                direction=SignalDirection.NO_TRADE,
                 score=0.0,
                 reasons=["Sin setup compuesto actionable"],
                 timestamp=current_bar.timestamp
@@ -113,13 +116,14 @@ class ComposableStrategy(BaseStrategy):
             take_profit = round(close - ((stop_loss - close) * self.rr_target), 2)
 
         return StrategySignal(
-            strategy_name=self.name,
+            strategy_id=self.strategy_id,
+            strategy_version=self.version,
             symbol=symbol,
             direction=direction,
             score=round(score, 1),
-            suggested_entry=close,
-            suggested_stop_loss=stop_loss,
-            suggested_take_profit=take_profit,
+            entry_price=close,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
             reasons=reasons,
             timestamp=current_bar.timestamp
         )

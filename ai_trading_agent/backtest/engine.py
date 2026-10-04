@@ -73,11 +73,16 @@ class BacktestEngine:
         symbol: str,
         bars: List[OHLCVBar],
         min_warmup_bars: int = 35,
-        dataset_type: str = "FULL"
+        dataset_type: str = "FULL",
+        strategy: Optional[Any] = None,
+        strategies: Optional[List[Any]] = None
     ) -> BacktestReport:
         """
         Ejecuta la simulación barra a barra sin sesgo de anticipación.
+        Soporta inyección de estrategia dinámica para el Strategy Laboratory.
         """
+        active_strategies = [strategy] if strategy is not None else (strategies or self.strategies)
+
         if len(bars) <= min_warmup_bars:
             empty_metrics = metrics_calculator.calculate([], self.initial_capital)
             now = bars[-1].timestamp if bars else datetime.utcnow()
@@ -182,7 +187,7 @@ class BacktestEngine:
             if active_position is None:
                 ind = indicators.calculate_all(history)
                 regime, _ = regime_detector.detect_regime(ind)
-                signals = [s.evaluate(symbol, history, ind, regime) for s in self.strategies]
+                signals = [s.evaluate(symbol, history, ind, regime) for s in active_strategies]
                 agg_signal, proposal = signal_aggregator.aggregate(symbol, signals, current_bar.timestamp)
 
                 if agg_signal.is_actionable and proposal:

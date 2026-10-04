@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 import uuid
 
+from ai_trading_agent.domain.models import OHLCVBar
 from ai_trading_agent.data.synthetic import synthetic_generator
 from ai_trading_agent.backtest.engine import backtest_engine
 from ai_trading_agent.strategy_lab.core.models import LabExperiment, LabStrategyDefinition
@@ -27,19 +28,21 @@ class ExperimentEngine:
         symbol: str = "SPY",
         timeframe: str = "15m",
         bar_count: int = 150,
-        random_seed: int = 42
+        random_seed: int = 42,
+        bars: Optional[List[OHLCVBar]] = None
     ) -> LabExperiment:
         exp_id = f"EXP-{uuid.uuid4().hex[:8].upper()}"
 
         # 1. Generar datos deterministas según la semilla
-        bars = synthetic_generator.generate_bars(
+        # Accept optional bars or generate synthetic
+        eval_bars = bars if bars is not None else synthetic_generator.generate_bars(
             symbol=symbol,
             count=bar_count,
             regime="BULL_TREND",
             seed=random_seed
         )
 
-        # 2. Instanciar la estrategia compuesta y ejecutar el backtest
+        # 2. Instanciar la estrategia compuesta y ejecutar el backtest con inyección dinámica explícita
         comp_strat = ComposableStrategy(
             strategy_id=strategy_def.strategy_id,
             name=strategy_def.name,
@@ -48,7 +51,7 @@ class ExperimentEngine:
             rules=strategy_def.rules
         )
 
-        report = backtest_engine.run(symbol=symbol, bars=bars)
+        report = backtest_engine.run(symbol=symbol, bars=eval_bars, strategy=comp_strat)
 
         metrics_data = {
             "total_trades": report.metrics.total_trades,
@@ -57,7 +60,8 @@ class ExperimentEngine:
             "sharpe_ratio": report.metrics.sharpe_ratio,
             "max_drawdown_pct": report.metrics.max_drawdown_pct,
             "total_net_pnl": report.metrics.total_net_pnl,
-            "expectancy_dollars": report.metrics.expectancy_dollars
+            "expectancy_dollars": report.metrics.expectancy_dollars,
+            "trades": report.trades
         }
 
         experiment = LabExperiment(
@@ -99,9 +103,9 @@ class ExperimentEngine:
             json.dumps(exp.universe),
             json.dumps(exp.symbols),
             exp.timeframe,
-            json.dumps(exp.parameters),
-            json.dumps(exp.features),
-            json.dumps(exp.metrics),
+            json.dumps(exp.parameters, default=str),
+            json.dumps(exp.features, default=str),
+            json.dumps(exp.metrics, default=str),
             exp.status,
             exp.created_at.isoformat()
         ))
