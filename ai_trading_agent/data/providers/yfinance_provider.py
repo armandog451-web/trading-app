@@ -30,18 +30,24 @@ class YFinanceMarketDataProvider(BaseMarketDataProvider):
         symbol: str,
         count: int = 100,
         interval: str = "5m",
-        end_time: Optional[datetime] = None
+        end_time: Optional[datetime] = None,
+        period: Optional[str] = None
     ) -> List[OHLCVBar]:
         """Descarga y normaliza barras OHLCV desde Yahoo Finance."""
         try:
             # Mapear intervalos válidos de yfinance
             yf_interval = interval if interval in ["1m", "2m", "5m", "15m", "30m", "60m", "1h", "1d"] else "5m"
-            if count > 500 or yf_interval in ["15m", "30m", "60m", "1h", "1d"]:
-                period = "60d"
-            elif yf_interval in ["1m", "2m", "5m"]:
-                period = "7d"
-            else:
-                period = "1mo"
+            if period is None:
+                if yf_interval == "1d":
+                    period = "5y"
+                elif yf_interval in ["60m", "1h"]:
+                    period = "730d"
+                elif yf_interval in ["15m", "30m"]:
+                    period = "60d"
+                elif yf_interval in ["1m", "2m", "5m"]:
+                    period = "7d"
+                else:
+                    period = "60d" if count > 500 else "1mo"
 
             ticker = yf.Ticker(symbol)
             df = ticker.history(period=period, interval=yf_interval)

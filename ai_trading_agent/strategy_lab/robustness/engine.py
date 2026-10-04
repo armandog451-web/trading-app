@@ -109,7 +109,10 @@ class RobustnessEngine:
         mc = self.run_monte_carlo(trades, initial_capital=initial_capital)
 
         # 1. Degradación IS vs OOS (0 - 30 pts)
-        sharpe_ratio_retention = min(1.0, out_sample_sharpe / max(0.1, in_sample_sharpe))
+        if out_sample_sharpe <= 0.0:
+            sharpe_ratio_retention = 0.0
+        else:
+            sharpe_ratio_retention = min(1.0, max(0.0, out_sample_sharpe / max(0.1, in_sample_sharpe)))
         oos_stability_score = sharpe_ratio_retention * 30.0
 
         # 2. Monte Carlo Drawdown Score (0 - 40 pts)
@@ -120,8 +123,8 @@ class RobustnessEngine:
         fail_prob = mc["probability_of_failure"]
         fail_score = max(0.0, 30.0 - (fail_prob * 0.6))
 
-        total_score = round(min(100.0, oos_stability_score + mc_score + fail_score), 2)
-        param_sensitivity = round(max(0.0, (1.0 - sharpe_ratio_retention) * 100.0), 2)
+        total_score = round(min(100.0, max(0.0, oos_stability_score + mc_score + fail_score)), 2)
+        param_sensitivity = round(max(0.0, min(100.0, (1.0 - sharpe_ratio_retention) * 100.0)), 2)
 
         from ai_trading_agent.strategy_lab.discovery.quantitative_hardening import (
             calculate_economic_edge_score,
