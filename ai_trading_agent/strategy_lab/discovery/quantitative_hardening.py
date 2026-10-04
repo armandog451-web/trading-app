@@ -113,12 +113,23 @@ def calculate_economic_edge_score(
     """
     Calcula el Economic Edge Score (0 a 100) y su clasificación formal.
     Reglas estrictas:
-    - Si trade_count == 0 o profit_factor <= 1.00: NO_EDGE (0.0 pts)
-    - Si profit_factor entre 1.00 y 1.10 o OOS Sharpe <= 0: WEAK_EDGE (Score capado entre 5.0 y 25.0 pts)
-    - Si profit_factor > 1.10 y OOS Sharpe > 0: POSITIVE_EDGE
+    - Si trade_count == 0 o profit_factor <= 1.00 o valores inválidos (NaN/Inf): NO_EDGE (0.0 pts)
+    - Si profit_factor entre 1.00 y 1.10 o OOS Sharpe <= 0 o Expectancy <= 0: WEAK_EDGE (Score capado entre 5.0 y 25.0 pts)
+    - Si profit_factor > 1.10 y OOS Sharpe > 0 y Expectancy > 0: POSITIVE_EDGE
     """
-    if trade_count == 0 or profit_factor <= 1.00:
+    import math
+    if (
+        trade_count <= 0 or 
+        math.isnan(profit_factor) or 
+        math.isinf(profit_factor) or 
+        profit_factor <= 1.00
+    ):
         return 0.0, EconomicEdgeClassification.NO_EDGE
+
+    if math.isnan(expectancy) or math.isinf(expectancy):
+        expectancy = 0.0
+    if math.isnan(oos_sharpe) or math.isinf(oos_sharpe):
+        oos_sharpe = 0.0
 
     if profit_factor <= 1.10 or oos_sharpe <= 0.0 or expectancy <= 0.0:
         # Ventaja débil
@@ -126,12 +137,13 @@ def calculate_economic_edge_score(
         score = min(25.0, 5.0 + (pf_excess / 0.10) * 20.0)
         return round(score, 2), EconomicEdgeClassification.WEAK_EDGE
 
-    # Ventaja positiva confirmada
-    pf_component = min(40.0, (profit_factor - 1.0) * 40.0)
-    sharpe_component = min(35.0, max(0.0, oos_sharpe) * 20.0)
-    exp_component = min(25.0, max(0.0, expectancy) * 5.0)
+    # Ventaja positiva confirmada (Monótona, base 25.0 tras superar WEAK_EDGE)
+    base_score = 25.0
+    pf_component = min(30.0, (profit_factor - 1.10) * 30.0)
+    sharpe_component = min(25.0, max(0.0, oos_sharpe) * 15.0)
+    exp_component = min(20.0, max(0.0, expectancy) * 10.0)
 
-    total_score = min(100.0, pf_component + sharpe_component + exp_component)
+    total_score = min(100.0, base_score + pf_component + sharpe_component + exp_component)
     return round(total_score, 2), EconomicEdgeClassification.POSITIVE_EDGE
 
 
@@ -143,12 +155,20 @@ def calculate_oos_stability_score(
 ) -> float:
     """
     Calcula el OOS Stability Score (0 a 100) combinando retención relativa y magnitud absoluta.
-    Penaliza explícitamente OOS Sharpe negativo o PnL negativo.
+    Penaliza explícitamente OOS Sharpe negativo, PnL negativo, o valores NaN/Inf.
     """
-    if oos_sharpe <= 0.0 or oos_pnl <= 0.0:
+    import math
+    if (
+        math.isnan(oos_sharpe) or 
+        math.isinf(oos_sharpe) or 
+        oos_sharpe <= 0.0 or 
+        math.isnan(oos_pnl) or 
+        math.isinf(oos_pnl) or 
+        oos_pnl <= 0.0
+    ):
         return 0.0
 
-    if is_sharpe <= 0.0:
+    if math.isnan(is_sharpe) or math.isinf(is_sharpe) or is_sharpe <= 0.0:
         retention = 0.0
     else:
         retention = min(1.0, oos_sharpe / max(0.1, is_sharpe))
@@ -165,9 +185,16 @@ def calculate_slippage_resilience_score(
     high_stress_pnl: float
 ) -> float:
     """
-    Calcula la resiliencia a slippage (0 a 100) protegida contra Baseline PnL <= 0 o cerca de 0.
+    Calcula la resiliencia a slippage (0 a 100) protegida contra Baseline PnL <= 0 o cerca de 0 y NaN/Inf.
     """
-    if baseline_pnl <= 0.0:
+    import math
+    if (
+        math.isnan(baseline_pnl) or 
+        math.isinf(baseline_pnl) or 
+        baseline_pnl <= 0.0 or 
+        math.isnan(high_stress_pnl) or 
+        math.isinf(high_stress_pnl)
+    ):
         return 0.0
 
     retention = max(0.0, high_stress_pnl / baseline_pnl)
@@ -199,8 +226,19 @@ def calculate_strategy_quality_score(
     - Simplicidad: 5% (100 - overfit_risk)
     Penaliza drásticamente baja actividad / 0 trades.
     """
-    if trade_count == 0:
+    import math
+    if trade_count <= 0:
         return 0.0
+
+    if math.isnan(economic_edge_score) or math.isinf(economic_edge_score):
+        economic_edge_score = 0.0
+    else:
+        economic_edge_score = min(100.0, max(0.0, economic_edge_score))
+
+    if math.isnan(robustness_score) or math.isinf(robustness_score):
+        robustness_score = 0.0
+    else:
+        robustness_score = min(100.0, max(0.0, robustness_score))
 
     evidence_level = classify_statistical_evidence(trade_count)
     evidence_scores = {
@@ -214,7 +252,9 @@ def calculate_strategy_quality_score(
 
     oos_stability = calculate_oos_stability_score(is_sharpe, oos_sharpe, is_pnl, oos_pnl)
     slippage_resilience = calculate_slippage_resilience_score(baseline_pnl, high_stress_pnl)
-    simplicity_score = max(0.0, 100.0 - overfit_risk - complexity_penalty)
+    
+    simplicity_penalty = (0.0 if math.isnan(overfit_risk) else overfit_risk) + (0.0 if math.isnan(complexity_penalty) else complexity_penalty)
+    simplicity_score = min(100.0, max(0.0, 100.0 - simplicity_penalty))
 
     weighted = (
         (economic_edge_score * 0.30) +
@@ -225,7 +265,9 @@ def calculate_strategy_quality_score(
         (simplicity_score * 0.05)
     )
 
-    # Penalización por baja muestra de trades
+    # Penalización por baja muestra de trades (SamplePenalty)
+    # Si trade_count < 8: penalización lineal trade_count / 8.0.
+    # Si trade_count >= 8: sample_penalty = 1.0 (sin penalización).
     if trade_count < 8:
         sample_penalty = trade_count / 8.0
         weighted *= sample_penalty
