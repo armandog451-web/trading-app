@@ -135,6 +135,51 @@ def init_db():
     )
     """)
 
+    # --- STRATEGY DISCOVERY ENGINE v1.0 TABLES ---
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_features (
+        feature_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        datatype TEXT NOT NULL,
+        lookback_bars INTEGER NOT NULL,
+        data_dependencies_json TEXT NOT NULL,
+        uses_future_information INTEGER NOT NULL DEFAULT 0,
+        allowed_for_research INTEGER NOT NULL DEFAULT 1
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_research_memory (
+        observation_id TEXT PRIMARY KEY,
+        hypothesis_id TEXT,
+        strategy_id TEXT,
+        features_used TEXT,
+        signature TEXT,
+        sharpe_ratio REAL,
+        win_rate REAL,
+        max_drawdown REAL,
+        failure_reason TEXT,
+        metrics_json TEXT,
+        created_at TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_research_sessions (
+        session_id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        budget_json TEXT NOT NULL,
+        hypotheses_generated INTEGER NOT NULL DEFAULT 0,
+        experiments_run INTEGER NOT NULL DEFAULT 0,
+        strategies_promoted INTEGER NOT NULL DEFAULT 0,
+        summary_json TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT
+    )
+    """)
+
     # Inicializar métricas base de las estrategias de los videos si no existen
     cursor.execute("SELECT COUNT(*) FROM strategy_metrics")
     if cursor.fetchone()[0] == 0:

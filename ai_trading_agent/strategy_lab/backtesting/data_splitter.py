@@ -120,3 +120,5 @@ class LabDataSplitter:
 
 
 lab_data_splitter = LabDataSplitter()
+DataSplitter = LabDataSplitter
+

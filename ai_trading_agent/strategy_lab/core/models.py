@@ -23,6 +23,10 @@ class StrategyStatus(str, Enum):
     RETIRED = "RETIRED"
 
 
+StrategyLifecycleStatus = StrategyStatus
+
+
+
 class HypothesisStatus(str, Enum):
     NEW = "NEW"
     TESTING = "TESTING"

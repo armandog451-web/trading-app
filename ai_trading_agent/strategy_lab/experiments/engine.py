@@ -23,18 +23,20 @@ class ExperimentEngine:
 
     def run_experiment(
         self,
-        hypothesis_id: str,
-        strategy_def: LabStrategyDefinition,
+        hypothesis_id: str = "HYP_DEFAULT",
+        strategy_def: Optional[LabStrategyDefinition] = None,
         symbol: str = "SPY",
         timeframe: str = "15m",
         bar_count: int = 150,
         random_seed: int = 42,
-        bars: Optional[List[OHLCVBar]] = None
+        bars: Optional[List[OHLCVBar]] = None,
+        strategy: Optional[ComposableStrategy] = None,
+        parameters: Optional[Dict[str, Any]] = None,
+        name: str = ""
     ) -> LabExperiment:
         exp_id = f"EXP-{uuid.uuid4().hex[:8].upper()}"
 
         # 1. Generar datos deterministas según la semilla
-        # Accept optional bars or generate synthetic
         eval_bars = bars if bars is not None else synthetic_generator.generate_bars(
             symbol=symbol,
             count=bar_count,
@@ -42,14 +44,29 @@ class ExperimentEngine:
             seed=random_seed
         )
 
-        # 2. Instanciar la estrategia compuesta y ejecutar el backtest con inyección dinámica explícita
-        comp_strat = ComposableStrategy(
-            strategy_id=strategy_def.strategy_id,
-            name=strategy_def.name,
-            version=strategy_def.version,
-            parameters=strategy_def.parameters,
-            rules=strategy_def.rules
-        )
+        # 2. Instanciar la estrategia compuesta o usar la recibida
+        if strategy is not None:
+            comp_strat = strategy
+            strat_id = strategy.strategy_id
+            strat_version = strategy.version
+            params = parameters or strategy.parameters
+            universe = ["SPY", "QQQ"]
+            features = list(strategy.rules.keys())
+        elif strategy_def is not None:
+            comp_strat = ComposableStrategy(
+                strategy_id=strategy_def.strategy_id,
+                name=strategy_def.name,
+                version=strategy_def.version,
+                parameters=strategy_def.parameters,
+                rules=strategy_def.rules
+            )
+            strat_id = strategy_def.strategy_id
+            strat_version = strategy_def.version
+            params = strategy_def.parameters
+            universe = strategy_def.universe
+            features = list(strategy_def.rules.keys())
+        else:
+            raise ValueError("Se requiere strategy_def o strategy para ejecutar el experimento.")
 
         report = backtest_engine.run(symbol=symbol, bars=eval_bars, strategy=comp_strat)
 
@@ -67,14 +84,14 @@ class ExperimentEngine:
         experiment = LabExperiment(
             experiment_id=exp_id,
             hypothesis_id=hypothesis_id,
-            strategy_id=strategy_def.strategy_id,
-            strategy_version=strategy_def.version,
+            strategy_id=strat_id,
+            strategy_version=strat_version,
             dataset_version=f"synthetic_seed_{random_seed}",
-            universe=strategy_def.universe,
+            universe=universe,
             symbols=[symbol],
             timeframe=timeframe,
-            parameters=strategy_def.parameters,
-            features=list(strategy_def.rules.keys()),
+            parameters=params,
+            features=features,
             metrics=metrics_data,
             status="COMPLETED",
             created_at=datetime.utcnow()

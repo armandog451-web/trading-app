@@ -1,10 +1,10 @@
 # PROJECT STATUS — AI TRADING AGENT 1.0 (SUPERROBOT)
 
-> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + $1M RISK PROFILE + **AUTONOMOUS STRATEGY LABORATORY & RESEARCH ENGINE CONSOLIDADO** (100% Completados y Verificados)  
+> **Estado General:** FASES 1 A 5 + BROKERS (MOOMOO & ALPACA) + TELEGRAM + WEEKEND SCANNER + MARKET SCHEDULE + $1M RISK PROFILE + **STRATEGY LABORATORY & DISCOVERY ENGINE v1.0** (100% Completados y Verificados)  
 > **Modo Operativo Inicial:** `ANALYSIS_ONLY` (Punto de partida conservatorio sin garantía de rentabilidad, manteniendo el agente en análisis hasta validación total)  
-> **Versión del Core:** v1.8.5-pro  
+> **Versión del Core:** v1.9.0-pro  
 > **Fecha de Actualización:** 2026-10-04  
-> **Resultados de Tests:** 83 de 83 pruebas unitarias, de seguridad, aislamiento de holdout y laboratorio adaptativo PASADAS (100% de éxito)  
+> **Resultados de Tests:** 99 de 99 pruebas unitarias, de seguridad, aislamiento de holdout, discovery autónomo y laboratorios PASADAS (100% de éxito)  
 > **Sincronización Automática:** Habilitada — Todo cambio registrado en `PROJECT_STATUS.md` y subido automáticamente a GitHub (`armandog451-web/trading-app`).
 
 ---

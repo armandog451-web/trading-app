@@ -340,3 +340,53 @@ def promote_lab_strategy(req: PromoteStrategyRequest) -> Dict[str, Any]:
     }
 
 
+# --- STRATEGY DISCOVERY ENGINE v1.0 ENDPOINTS ---
+
+class RunDiscoveryRequest(BaseModel):
+    max_experiments: int = 5
+    max_time_seconds: int = 120
+    target_market: str = "BTC/USDT"
+    target_timeframe: str = "1h"
+
+
+@app.get("/api/strategy-lab/discovery/features")
+def list_discovery_features() -> Dict[str, Any]:
+    """Lista el catálogo de features cuantitativos verificados del Discovery Engine."""
+    from ai_trading_agent.strategy_lab.discovery.feature_universe import feature_universe
+    features = feature_universe.list_features()
+    return {
+        "count": len(features),
+        "features": [f.model_dump() for f in features]
+    }
+
+
+@app.get("/api/strategy-lab/discovery/memory")
+def get_discovery_memory() -> Dict[str, Any]:
+    """Obtiene el historial de memoria cuantitativa y los mejores features observados."""
+    from ai_trading_agent.strategy_lab.discovery.orchestrator import DiscoveryOrchestrator
+    orchestrator = DiscoveryOrchestrator()
+    return {
+        "top_features": orchestrator.memory.get_top_performing_features(top_n=5),
+        "failed_patterns": orchestrator.memory.get_failed_patterns(),
+        "total_observations": len(orchestrator.memory.get_all_observations())
+    }
+
+
+@app.post("/api/strategy-lab/discovery/run")
+def run_discovery_session(req: RunDiscoveryRequest = Body(...)) -> Dict[str, Any]:
+    """Ejecuta una sesión de descubrimiento autónomo cuantitativo con presupuesto controlado."""
+    from ai_trading_agent.strategy_lab.discovery.orchestrator import DiscoveryOrchestrator, ResearchBudget
+    budget = ResearchBudget(
+        max_experiments=req.max_experiments,
+        max_time_seconds=req.max_time_seconds
+    )
+    orchestrator = DiscoveryOrchestrator()
+    report = orchestrator.run_autonomous_research_session(
+        budget=budget,
+        target_market=req.target_market,
+        target_timeframe=req.target_timeframe
+    )
+    return report.model_dump()
+
+
+
