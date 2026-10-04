@@ -115,5 +115,11 @@ class RobustnessEngine:
             is_robust=total_score >= 65.0
         )
 
+    def run_full_robustness_battery(self, trades: List[Dict[str, Any]], in_sample_sharpe: float = 1.0, out_sample_sharpe: float = 1.0) -> Dict[str, Any]:
+        """Ejecuta la batería completa de robustez y devuelve diccionario de métricas."""
+        report = self.evaluate_robustness(trades, in_sample_sharpe=in_sample_sharpe, out_sample_sharpe=out_sample_sharpe)
+        return report.model_dump()
+
 
 robustness_engine = RobustnessEngine()
+
