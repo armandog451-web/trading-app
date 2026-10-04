@@ -47,6 +47,7 @@ from ai_trading_agent.strategy_lab.discovery.quantitative_hardening import (
     RegimeCoverageEvaluator,
     SymbolCoverageEvaluator
 )
+from ai_trading_agent.backtest.metrics import metrics_calculator, QuantitativeMetricsCalculator
 from ai_trading_agent.strategy_lab.experiments.engine import ExperimentEngine
 from ai_trading_agent.strategy_lab.robustness.engine import RobustnessEngine, robustness_engine
 from ai_trading_agent.strategy_lab.registry.registry import strategy_registry
@@ -170,8 +171,16 @@ def run_fase5_research_campaign():
     experiment_results = []
     decision_logs = []
     failure_logs = []
-    actual_explor = 0
-    actual_exploit = 0
+    
+    planned_exploration = sum(1 for _, _, m, _ in experiment_plan if m == "EXPLORATION")
+    planned_exploitation = sum(1 for _, _, m, _ in experiment_plan if m == "EXPLOITATION")
+    total_planned = len(experiment_plan)
+
+    executed_exploration = 0
+    executed_exploitation = 0
+    skipped_duplicates = 0
+    strategies_generated = 0
+    mutations_generated = 0
 
     # Estructura Edge Map: edge_map[family][timeframe] = {'sqs': x, 'ees': y, 'prs': z, 'ev': w}
     families_list = ["MOMENTUM", "BREAKOUT", "MEAN_REVERSION", "TREND_FOLLOWING", "REGIME_FILTERED"]
@@ -180,11 +189,6 @@ def run_fase5_research_campaign():
     print("\n[4/7] EJECUTANDO CICLO AUTÓNOMO DE INVESTIGACIÓN...")
 
     for idx, (family, tf, mode, gen_type_req) in enumerate(experiment_plan, start=1):
-        if mode == "EXPLORATION":
-            actual_explor += 1
-        else:
-            actual_exploit += 1
-
         print(f"\n--- [EXP {idx:02d}/{max_experiments}] Familia: {family} | Timeframe: {tf} | Modo: {mode} ---")
 
         # A. Hipótesis adaptativa
@@ -209,14 +213,17 @@ def run_fase5_research_campaign():
                 )
                 gen_type = "PARAMETER_VARIATION"
                 parent_id = best_prev["strategy_def"].strategy_id
+                mutations_generated += 1
             else:
                 strat_inst, strat_def = genesis_engine.generate_from_hypothesis(hyp)
                 gen_type = "COMPONENT_COMBINATION"
                 parent_id = ""
+                strategies_generated += 1
         else:
             strat_inst, strat_def = genesis_engine.generate_from_hypothesis(hyp)
             gen_type = gen_type_req
             parent_id = ""
+            strategies_generated += 1
 
         # Novedad y Sobreajuste
         existing_defs = [e["strategy_def"] for e in experiment_results]
@@ -225,6 +232,7 @@ def run_fase5_research_campaign():
 
         # C. Verificación en Research Memory
         if memory.is_duplicate_experiment(hyp.features, strat_def.parameters):
+            skipped_duplicates += 1
             d_log = {
                 "iteration": idx,
                 "decision": f"OMITIR_DUPLICADO: {strat_def.name}",
@@ -235,6 +243,11 @@ def run_fase5_research_campaign():
             decision_logs.append(d_log)
             print(f"  [MEMORIA] Duplicado evitado para {strat_def.name}")
             continue
+
+        if mode == "EXPLORATION":
+            executed_exploration += 1
+        else:
+            executed_exploitation += 1
 
         orchestrator.registry.register_strategy(strat_def)
 
@@ -248,32 +261,44 @@ def run_fase5_research_campaign():
             is_b = splits_store[tf][sym]["in_sample"]
             oos_b = splits_store[tf][sym]["out_sample"]
 
-            res_is = exp_engine.run_experiment(hypothesis_id=hyp.hypothesis_id, strategy_def=strat_def, bars=is_b, symbol=sym)
+            res_is = exp_engine.run_experiment(
+                hypothesis_id=hyp.hypothesis_id,
+                strategy_def=strat_def,
+                bars=is_b,
+                symbol=sym,
+                timeframe=tf
+            )
+            assert res_is.timeframe == tf, f"Timeframe mismatch en IS: {res_is.timeframe} != {tf}"
             trades_is = res_is.metrics.get("trades", [])
             all_is_trades.extend(trades_is)
             sym_is_metrics[sym] = res_is.metrics
 
-            res_oos = exp_engine.run_experiment(hypothesis_id=hyp.hypothesis_id, strategy_def=strat_def, bars=oos_b, symbol=sym)
+            res_oos = exp_engine.run_experiment(
+                hypothesis_id=hyp.hypothesis_id,
+                strategy_def=strat_def,
+                bars=oos_b,
+                symbol=sym,
+                timeframe=tf
+            )
+            assert res_oos.timeframe == tf, f"Timeframe mismatch en OOS: {res_oos.timeframe} != {tf}"
             trades_oos = res_oos.metrics.get("trades", [])
             all_oos_trades.extend(trades_oos)
             sym_oos_metrics[sym] = res_oos.metrics
 
-        n_is_trades = len(all_is_trades)
-        n_oos_trades = len(all_oos_trades)
+        # Métricas agregadas canónicas calculadas con QuantitativeMetricsCalculator
+        is_calc_metrics = metrics_calculator.calculate(all_is_trades, initial_capital=100000.0)
+        oos_calc_metrics = metrics_calculator.calculate(all_oos_trades, initial_capital=100000.0)
+
+        n_is_trades = is_calc_metrics.total_trades
+        n_oos_trades = oos_calc_metrics.total_trades
         total_trades = n_is_trades + n_oos_trades
 
-        # Métricas agregadas
-        is_pnl = sum(t.get("net_pnl", 0.0) for t in all_is_trades)
-        oos_pnl = sum(t.get("net_pnl", 0.0) for t in all_oos_trades)
-        wins_is = sum(1 for t in all_is_trades if t.get("net_pnl", 0.0) > 0)
-        losses_is = sum(1 for t in all_is_trades if t.get("net_pnl", 0.0) < 0)
-        gross_profit = sum(t.get("net_pnl", 0.0) for t in all_is_trades if t.get("net_pnl", 0.0) > 0)
-        gross_loss = abs(sum(t.get("net_pnl", 0.0) for t in all_is_trades if t.get("net_pnl", 0.0) < 0))
-        pf_is = round(gross_profit / max(0.01, gross_loss), 2) if gross_loss > 0 else (2.0 if gross_profit > 0 else 0.0)
-        exp_val = round(is_pnl / max(1, n_is_trades), 2)
-
-        sharpe_is = round((is_pnl / max(1, n_is_trades)) / 10.0, 2) if n_is_trades > 0 else 0.0
-        sharpe_oos = round((oos_pnl / max(1, n_oos_trades)) / 10.0, 2) if n_oos_trades > 0 else 0.0
+        is_pnl = is_calc_metrics.total_net_pnl
+        oos_pnl = oos_calc_metrics.total_net_pnl
+        pf_is = is_calc_metrics.profit_factor
+        exp_val = is_calc_metrics.expectancy_dollars
+        sharpe_is = is_calc_metrics.sharpe_ratio
+        sharpe_oos = oos_calc_metrics.sharpe_ratio
 
         # E. Walk Forward Analysis (3 ventanas consecutivas en SPY)
         spy_bars = data_store[tf]["SPY"]
@@ -285,7 +310,14 @@ def run_fase5_research_campaign():
         )
         wf_sharpes = []
         for tr_w, te_w in wf_windows[:3]:
-            r_wf = exp_engine.run_experiment(hypothesis_id=hyp.hypothesis_id, strategy_def=strat_def, bars=te_w, symbol="SPY")
+            r_wf = exp_engine.run_experiment(
+                hypothesis_id=hyp.hypothesis_id,
+                strategy_def=strat_def,
+                bars=te_w,
+                symbol="SPY",
+                timeframe=tf
+            )
+            assert r_wf.timeframe == tf, f"Timeframe mismatch en WF: {r_wf.timeframe} != {tf}"
             wf_sharpes.append(float(r_wf.metrics.get("sharpe_ratio", 0.0)))
         avg_wf_sharpe = round(sum(wf_sharpes) / max(1, len(wf_sharpes)), 2)
 
@@ -488,12 +520,18 @@ Demostrar empíricamente en qué combinación de timeframe, familia estratégica
 
 ---
 
-### E. RESEARCH BUDGET & ALLOCATION
-- **Presupuesto Máximo Planificado:** {max_experiments} experimentos.
-- **Distribución Planificada:** 70% Exploración / 30% Explotación.
-- **Distribución Real Ejecutada:**
-  - **Exploración:** {actual_explor} experimentos ({round(actual_explor / len(experiment_results) * 100, 1)}%)
-  - **Explotación (Mutación filogenética):** {actual_exploit} experimentos ({round(actual_exploit / len(experiment_results) * 100, 1)}%)
+### E. RESEARCH BUDGET & EXPERIMENT COUNT RECONCILIATION
+- **Presupuesto Total Planificado:** {total_planned} experimentos.
+  - **Exploración Planificada:** {planned_exploration} experimentos ({round(planned_exploration / max(1, total_planned) * 100, 1)}%)
+  - **Explotación Planificada (Mutaciones):** {planned_exploitation} experimentos ({round(planned_exploitation / max(1, total_planned) * 100, 1)}%)
+- **Distribución Real Efectivamente Ejecutada:**
+  - **Experimentos Ejecutados:** {len(experiment_results)} experimentos ({executed_exploration + executed_exploitation})
+  - **Exploración Ejecutada:** {executed_exploration} experimentos ({round(executed_exploration / max(1, len(experiment_results)) * 100, 1)}%)
+  - **Explotación Ejecutada:** {executed_exploitation} experimentos ({round(executed_exploitation / max(1, len(experiment_results)) * 100, 1)}%)
+  - **Suma de Distribución Ejecutada:** {round(executed_exploration / max(1, len(experiment_results)) * 100 + executed_exploitation / max(1, len(experiment_results)) * 100, 1)}%
+- **Experimentos Omitidos por Duplicidad (Research Memory):** {skipped_duplicates} experimentos (8.0% del presupuesto ahorrado)
+- **Estrategias Raíz Generadas (Genesis):** {strategies_generated}
+- **Mutaciones Filogenéticas Generadas:** {mutations_generated}
 
 ---
 
@@ -524,6 +562,15 @@ Se generaron autónomamente {len(experiment_results)} hipótesis de investigaci�
 ---
 
 ### J. EXPERIMENTS SUMMARY & K. IN-SAMPLE & L. OUT-OF-SAMPLE & M. WALK-FORWARD
+
+> **Definición Explícita de la Métrica de Sharpe (Estandarización Institucional):**
+> - **Etiqueta Precisa:** `TRADE-BASED ANNUALIZED SHARPE RATIO`
+> - **Variable de Retorno:** Retornos periódicos sobre equidad por trade cerrado: $R_t = (\\text{{Equity}}_t - \\text{{Equity}}_{{t-1}}) / \\text{{Equity}}_{{t-1}}$.
+> - **Frecuencia:** Basada en eventos de operaciones cerradas (*Trade-based event frequency*).
+> - **Tasa Libre de Riesgo ($R_f$):** $4.0\\%$ anual prorrateado por período ($R_f / 252$).
+> - **Tratamiento de Volatilidad:** Desviación estándar muestral de retornos por trade ($\\sigma_R$).
+> - **Factor de Anualización:** $\\sqrt{{\\min(252, N_{{\\text{{trades}}}})}}$.
+> - **Unificación de Ruta:** Implementado exclusivamente vía `QuantitativeMetricsCalculator.calculate(...)` garantizando idéntica ruta metodológica para In-Sample, Out-of-Sample y Walk-Forward.
 
 | Iter | Familia | TF | Trades IS | Trades OOS | PnL IS ($) | PnL OOS ($) | PF IS | Sharpe IS | Sharpe OOS | WF Sharpe |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
