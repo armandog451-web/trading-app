@@ -125,7 +125,8 @@ class RobustnessEngine:
 
         from ai_trading_agent.strategy_lab.discovery.quantitative_hardening import (
             calculate_economic_edge_score,
-            calculate_strategy_quality_score
+            calculate_strategy_quality_score,
+            calculate_slippage_resilience_score
         )
 
         edge_score, edge_class = calculate_economic_edge_score(
@@ -139,6 +140,8 @@ class RobustnessEngine:
         baseline_pnl = sum(t.get("net_pnl", 0.0) for t in trades)
         if high_stress_pnl is None:
             high_stress_pnl = baseline_pnl * 0.60 if baseline_pnl > 0 else 0.0
+
+        slippage_score = calculate_slippage_resilience_score(baseline_pnl, high_stress_pnl)
 
         quality_score = calculate_strategy_quality_score(
             economic_edge_score=edge_score,
@@ -162,7 +165,7 @@ class RobustnessEngine:
             worst_expected_drawdown_pct=mc["worst_drawdown"],
             probability_of_failure_pct=mc["probability_of_failure"],
             parameter_sensitivity_score=param_sensitivity,
-            slippage_stress_resilience_pct=round(min(100.0, 100.0 - (worst_dd * 0.5)), 2),
+            slippage_stress_resilience_pct=slippage_score,
             is_robust=total_score >= 65.0
         )
 

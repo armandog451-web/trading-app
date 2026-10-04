@@ -363,6 +363,32 @@ class TestQuantitativeHardeningSuite:
         #              = 3.90 + 25.50 + 12.00 + 2.667 + 6.00 + 5.00 = 55.067 -> 55.07
         # SamplePenalty = 1.0 (76 >= 8 trades)
         assert report.strategy_quality_score == 55.07
+        assert report.slippage_stress_resilience_pct == 60.0
+
+    def test_v14_slippage_exact_reconciliation(self):
+        """Fase 4.8: Demostración explícita de reconciliación de slippage resilience y propagación a SQS."""
+        baseline_pnl = 76.0
+        high_stress_pnl = 45.6
+
+        # 1. Función de slippage directa
+        resilience = calculate_slippage_resilience_score(baseline_pnl, high_stress_pnl)
+        assert resilience == 60.0
+
+        # 2. Reporte de Robustness
+        trades = [{"net_pnl": 1.0} for _ in range(76)]
+        report = robustness_engine.evaluate_robustness(
+            trades=trades,
+            in_sample_sharpe=0.08,
+            out_sample_sharpe=0.05,
+            profit_factor=1.04,
+            expectancy=0.01,
+            high_stress_pnl=high_stress_pnl
+        )
+        assert report.slippage_stress_resilience_pct == 60.0
+
+        # 3. Propagación directa a StrategyQualityScore
+        # El componente de slippage (10%) en SQS aporta exactamente 60.0 * 0.10 = 6.00 puntos
+        assert report.strategy_quality_score == 55.07
 
     def test_fase47_prs_arithmetic_and_floor(self):
         """Fase 4.7 Test 2: Aritmética de PRS y comprobación del floor max(0.1, IS_Sharpe)."""
