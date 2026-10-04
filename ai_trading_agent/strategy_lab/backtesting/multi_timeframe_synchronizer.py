@@ -130,6 +130,65 @@ class MultiTimeframeSynchronizer:
         return True
 
 
+class DateBasedDataSplitter:
+    """
+    Particionador determinista basado en fechas exactas (calendar-based splitting).
+    Garantiza que diferentes timeframes compartan idénticos límites cronológicos (IS, OOS, HOLDOUT).
+    """
+
+    @staticmethod
+    def find_common_date_range(bars_list: List[List[OHLCVBar]]) -> Tuple[datetime, datetime]:
+        """Calcula la intersección cronológica máxima entre series de diferentes resoluciones."""
+        valid_series = [b for b in bars_list if b]
+        if not valid_series:
+            raise ValueError("No se proporcionaron series válidas para alinear.")
+        common_start = max(s[0].timestamp for s in valid_series)
+        common_end = min(s[-1].timestamp for s in valid_series)
+        if common_start >= common_end:
+            raise ValueError(f"Intersección vacía: {common_start} >= {common_end}")
+        return common_start, common_end
+
+    @staticmethod
+    def split_by_dates(
+        bars: List[OHLCVBar],
+        is_start: datetime,
+        is_end: datetime,
+        oos_start: datetime,
+        oos_end: datetime,
+        holdout_start: Optional[datetime] = None,
+        holdout_end: Optional[datetime] = None
+    ) -> Dict[str, List[OHLCVBar]]:
+        """Filtra una serie temporal en subconjuntos rigurosamente alineados por fechas."""
+        is_bars = [b for b in bars if is_start <= b.timestamp < is_end]
+        oos_bars = [b for b in bars if oos_start <= b.timestamp < oos_end]
+        holdout_bars = []
+        if holdout_start and holdout_end:
+            holdout_bars = [b for b in bars if holdout_start <= b.timestamp <= holdout_end]
+        return {
+            "in_sample": is_bars,
+            "out_sample": oos_bars,
+            "holdout": holdout_bars
+        }
+
+    @staticmethod
+    def create_calendar_splits(
+        common_start: datetime,
+        common_end: datetime,
+        is_ratio: float = 0.60,
+        oos_ratio: float = 0.20,
+        holdout_ratio: float = 0.20
+    ) -> Dict[str, Tuple[datetime, datetime]]:
+        """Calcula fronteras cronológicas exactas para todo el sistema."""
+        total_duration = common_end - common_start
+        is_end = common_start + (total_duration * is_ratio)
+        oos_end = is_end + (total_duration * oos_ratio)
+        return {
+            "in_sample": (common_start, is_end),
+            "out_sample": (is_end, oos_end),
+            "holdout": (oos_end, common_end)
+        }
+
+
 class MultiTimeframeStrategyEvaluator:
     """
     Evaluador determinista de señales e híbridos multi-timeframe.
@@ -470,11 +529,12 @@ class MultiTimeframeStrategyEvaluator:
 
         # CONFIG_D: 1D Context + 1H Entry + Salida Asimétrica Basada en Volatilidad (ATR Trailing)
         if self.config_type == "CONFIG_D":
+            target_rr = getattr(self, "rr_ratio", 3.0)
             if d_ctx["daily_bullish"]:
                 h1_long = (rsi <= 45.0 or (ema9 > ema21 and close > vwap)) and (rvol >= self.rvol_threshold)
                 if h1_long:
                     sl = round(close - (atr * self.atr_mult * 0.9), 2)
-                    tp = round(close + ((close - sl) * 3.0), 2)  # Asymmetric 3.0 R:R
+                    tp = round(close + ((close - sl) * target_rr), 2)  # Asymmetric Target R:R
                     return StrategySignal(
                         strategy_id=self.strategy_id,
                         strategy_version=self.version,
@@ -484,14 +544,14 @@ class MultiTimeframeStrategyEvaluator:
                         entry_price=close,
                         stop_loss=sl,
                         take_profit=tp,
-                        reasons=["Config D: 1D Context + 1H Entry + Asymmetric Volatility Exit (3.0R)"],
+                        reasons=[f"Config D: 1D Context + 1H Entry + Asymmetric Volatility Exit ({target_rr:.1f}R)"],
                         timestamp=current_1h_bar.timestamp
                     )
             elif d_ctx["daily_bearish"]:
                 h1_short = (rsi >= 55.0 or (ema9 < ema21 and close < vwap)) and (rvol >= self.rvol_threshold)
                 if h1_short:
                     sl = round(close + (atr * self.atr_mult * 0.9), 2)
-                    tp = round(close - ((sl - close) * 3.0), 2)
+                    tp = round(close - ((sl - close) * target_rr), 2)
                     return StrategySignal(
                         strategy_id=self.strategy_id,
                         strategy_version=self.version,
@@ -501,7 +561,7 @@ class MultiTimeframeStrategyEvaluator:
                         entry_price=close,
                         stop_loss=sl,
                         take_profit=tp,
-                        reasons=["Config D: 1D Context + 1H Entry + Asymmetric Volatility Exit (3.0R)"],
+                        reasons=[f"Config D: 1D Context + 1H Entry + Asymmetric Volatility Exit ({target_rr:.1f}R)"],
                         timestamp=current_1h_bar.timestamp
                     )
             return StrategySignal(
@@ -680,3 +740,119 @@ class MultiTimeframeBacktestSimulator:
                         }
 
         return closed_trades
+
+    def run_paired_signal_analysis(
+        self,
+        symbol: str,
+        h1_bars: List[OHLCVBar],
+        daily_bars: List[OHLCVBar],
+        min_warmup: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Ejecuta el Paired Signal Analysis:
+        Identifica todas las señales potenciales del componente 1H,
+        y las clasifica en ALLOWED_BY_1D vs REJECTED_BY_1D evaluando
+        posteriormente el resultado sintético de cada grupo por separado.
+        """
+        if len(h1_bars) <= min_warmup:
+            return {
+                "total_1h_signals": 0,
+                "allowed_count": 0,
+                "rejected_count": 0,
+                "acceptance_rate": 0.0,
+                "allowed_trades": [],
+                "rejected_trades": []
+            }
+
+        allowed_trades = []
+        rejected_trades = []
+
+        # Evaluador 1H Puro para capturar todas las señales candidatas
+        eval_1h = MultiTimeframeStrategyEvaluator(config_type="BASELINE_1H")
+
+        for t in range(min_warmup, len(h1_bars) - 10):
+            curr_bar = h1_bars[t]
+            history_1h = h1_bars[:t + 1]
+
+            # 1. Señal bruta 1H
+            sig_1h = eval_1h.evaluate_hybrid_signal(symbol, curr_bar, history_1h, [])
+            if sig_1h.direction in [SignalDirection.BUY, SignalDirection.SELL] and sig_1h.entry_price and sig_1h.stop_loss and sig_1h.take_profit:
+                # 2. Consultar si el filtro 1D la permite o rechaza
+                closed_daily = MultiTimeframeSynchronizer.get_closed_daily_bars(curr_bar.timestamp, daily_bars)
+                d_ctx = self.evaluator.evaluate_1d_context(closed_daily)
+                
+                # Criterio del filtro diario: coincidencia de dirección
+                is_allowed = False
+                if sig_1h.direction == SignalDirection.BUY and d_ctx.get("daily_bullish"):
+                    is_allowed = True
+                elif sig_1h.direction == SignalDirection.SELL and d_ctx.get("daily_bearish"):
+                    is_allowed = True
+
+                # 3. Simulación de ejecución prospectiva a 10 barras (o hasta SL/TP)
+                entry_p = sig_1h.entry_price
+                sl = sig_1h.stop_loss
+                tp = sig_1h.take_profit
+                side = "BUY" if sig_1h.direction == SignalDirection.BUY else "SELL"
+
+                outcome_pnl = 0.0
+                mae = 0.0
+                mfe = 0.0
+                exit_price = None
+
+                for forward_idx in range(t + 1, min(len(h1_bars), t + 11)):
+                    f_bar = h1_bars[forward_idx]
+                    if side == "BUY":
+                        mae = max(mae, entry_p - f_bar.low)
+                        mfe = max(mfe, f_bar.high - entry_p)
+                        if f_bar.low <= sl:
+                            exit_price = sl
+                            break
+                        elif f_bar.high >= tp:
+                            exit_price = tp
+                            break
+                    else:
+                        mae = max(mae, f_bar.high - entry_p)
+                        mfe = max(mfe, entry_p - f_bar.low)
+                        if f_bar.high >= sl:
+                            exit_price = sl
+                            break
+                        elif f_bar.low >= tp:
+                            exit_price = tp
+                            break
+
+                if exit_price is None:
+                    exit_price = h1_bars[min(len(h1_bars) - 1, t + 10)].close
+
+                if side == "BUY":
+                    outcome_pnl = (exit_price - entry_p) * 100.0  # 100 acciones normalizadas
+                else:
+                    outcome_pnl = (entry_p - exit_price) * 100.0
+
+                trade_record = {
+                    "entry_time": curr_bar.timestamp,
+                    "direction": side,
+                    "entry_price": entry_p,
+                    "exit_price": exit_price,
+                    "net_pnl": round(outcome_pnl, 2),
+                    "mae": round(mae, 2),
+                    "mfe": round(mfe, 2),
+                    "is_win": outcome_pnl > 0
+                }
+
+                if is_allowed:
+                    allowed_trades.append(trade_record)
+                else:
+                    rejected_trades.append(trade_record)
+
+        total_sig = len(allowed_trades) + len(rejected_trades)
+        acc_rate = round(len(allowed_trades) / max(1, total_sig), 4)
+
+        return {
+            "total_1h_signals": total_sig,
+            "allowed_count": len(allowed_trades),
+            "rejected_count": len(rejected_trades),
+            "acceptance_rate": acc_rate,
+            "allowed_trades": allowed_trades,
+            "rejected_trades": rejected_trades
+        }
+
