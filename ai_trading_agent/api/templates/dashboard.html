@@ -115,6 +115,7 @@
         <button class="tab-btn" onclick="switchTab('journal')">📖 Auditoría & Journal</button>
         <button class="tab-btn" onclick="switchTab('scanner')">📅 Weekend Scanner</button>
         <button class="tab-btn" onclick="switchTab('schedule')">🕒 Market Schedule</button>
+        <button class="tab-btn" onclick="switchTab('strategylab')">🧪 Strategy Laboratory</button>
     </div>
 
     <!-- TAB 1: ANALYZER -->
@@ -986,6 +987,148 @@
                 `;
                 container.appendChild(card);
             });
+        }
+
+    <!-- TAB 6: STRATEGY LABORATORY -->
+    <div id="tab-strategylab" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>🧪 Autonomous Strategy Laboratory / Research Engine</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Investigación Autónomas | Ciclo de Vida Formal | Cero Acceso a Broker</span>
+        </div>
+
+        <div class="alert-box box-success" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>Aislamiento de Investigación:</strong> El laboratorio prueba, muta y evalúa estrategias de forma autónoma (IS/OOS/Walk-Forward/Monte Carlo).
+                Sólo promociona estrategias aprobadas al Trading Agent. El Risk Engine mantiene prioridad absoluta.
+            </div>
+            <button class="btn btn-primary" onclick="runAutonomousResearch()" style="white-space: nowrap;">⚡ Ejecutar Ciclo Autónomo</button>
+        </div>
+
+        <div class="grid-stats" style="margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">Estrategias Registradas</div>
+                <div class="stat-value" id="labTotalStrats">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">En Investigación / Backtest</div>
+                <div class="stat-value" id="labResearchCount" style="color: var(--accent-cyan);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">En Paper Validation</div>
+                <div class="stat-value" id="labPaperCount" style="color: var(--yellow);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Aprobadas para Operar</div>
+                <div class="stat-value" id="labApprovedCount" style="color: var(--green);">0</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-weight: 700; font-size: 14px; color: var(--text-muted);">
+            Catálogo de Estrategias y Registro de Linaje
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID / Versión</th>
+                        <th>Nombre / Descripción</th>
+                        <th>Estado Actual</th>
+                        <th>Robustness (0-100)</th>
+                        <th>Strategy Score</th>
+                        <th>Acción de Promoción</th>
+                    </tr>
+                </thead>
+                <tbody id="labStrategyTable">
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando catálogo del laboratorio...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+            
+            event.target.classList.add('active');
+            const targetPanel = document.getElementById('tab-' + tabId);
+            if(targetPanel) targetPanel.style.display = 'block';
+
+            if(tabId === 'schedule') loadScheduleTab();
+            if(tabId === 'scanner') loadWeekendScanTab();
+            if(tabId === 'strategylab') loadStrategyLab();
+        }
+
+        async function loadStrategyLab() {
+            try {
+                const overviewRes = await fetch('/api/strategy-lab/overview');
+                const overview = await overviewRes.json();
+
+                document.getElementById('labTotalStrats').innerText = overview.total_strategies || 0;
+                document.getElementById('labResearchCount').innerText = (overview.status_breakdown.RESEARCH || 0) + (overview.status_breakdown.BACKTEST || 0);
+                document.getElementById('labPaperCount').innerText = overview.status_breakdown.PAPER || 0;
+                document.getElementById('labApprovedCount').innerText = overview.status_breakdown.APPROVED || 0;
+
+                const stratsRes = await fetch('/api/strategy-lab/strategies');
+                const stratsData = await stratsRes.json();
+                const tbody = document.getElementById('labStrategyTable');
+                tbody.innerHTML = '';
+
+                if(!stratsData.strategies || stratsData.strategies.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No hay estrategias registradas. Ejecute un ciclo autónomo.</td></tr>';
+                    return;
+                }
+
+                stratsData.strategies.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${s.strategy_id}</strong><br><span style="font-size: 10px; color: var(--text-muted);">v${s.version}</span></td>
+                        <td>${s.name}<br><span style="font-size: 11px; color: var(--text-muted);">${s.description}</span></td>
+                        <td><span class="badge badge-cyan">${s.status}</span></td>
+                        <td><strong style="color: ${s.robustness_score >= 60 ? 'var(--green)' : 'var(--yellow)'};">${s.robustness_score.toFixed(1)}</strong></td>
+                        <td><strong style="color: var(--accent-cyan);">${s.strategy_score.toFixed(1)} / 100</strong></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="promoteLabStrategy('${s.strategy_id}', 'PAPER')">➔ Paper</button>
+                            <button class="btn btn-primary" style="padding: 4px 8px; font-size: 11px;" onclick="promoteLabStrategy('${s.strategy_id}', 'APPROVED')">✔ Aprobar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) {
+                console.error("Error cargando Strategy Lab:", e);
+            }
+        }
+
+        async function runAutonomousResearch() {
+            try {
+                alert("AI Research Agent: Iniciando ciclo autónomo de investigación...");
+                const res = await fetch('/api/strategy-lab/research/run?symbol=SPY', { method: 'POST' });
+                const data = await res.json();
+                alert(`Ciclo Completado!\nEstrategia: ${data.strategy_id}\nStrategy Score: ${data.strategy_score}\nRobustness Score: ${data.robustness_score}`);
+                loadStrategyLab();
+            } catch(e) {
+                alert("Error ejecutando investigación autónoma: " + e);
+            }
+        }
+
+        async function promoteLabStrategy(stratId, targetStatus) {
+            try {
+                const res = await fetch('/api/strategy-lab/strategy/promote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ strategy_id: stratId, target_status: targetStatus, reason: 'Promoción desde Dashboard UI' })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert(data.message);
+                } else {
+                    alert("Error: " + data.detail);
+                }
+                loadStrategyLab();
+            } catch(e) {
+                alert("Error promoviendo estrategia: " + e);
+            }
         }
 
         function exportScanner(format) {

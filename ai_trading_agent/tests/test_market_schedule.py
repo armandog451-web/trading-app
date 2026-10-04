@@ -127,12 +127,12 @@ class TestMarketScheduleSuite:
         scheduler.calendar.set_mock_clock(lambda: dt_test)
 
         # Limpiar cualquier log previo de la prueba
-        from database import get_connection
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM logs WHERE message LIKE '%Premarket%'")
-        conn.commit()
-        conn.close()
+        from ai_trading_agent.data.storage.repository import audit_repo
+        from ai_trading_agent.data.storage.models import DBTaskLog
+        with audit_repo.get_session() as session:
+            session.query(DBTaskLog).filter(DBTaskLog.task_id.like("%premarket_scan%")).delete(synchronize_session=False)
+            session.commit()
+        scheduler._last_executions.clear()
 
         # 1. Primera ejecución premarket
         res1 = asyncio.run(scheduler.run_premarket_scan(force=False))

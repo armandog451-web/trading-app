@@ -68,6 +68,73 @@ def init_db():
     )
     """)
 
+    # --- STRATEGY LABORATORY TABLES ---
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_hypotheses (
+        hypothesis_id TEXT PRIMARY KEY,
+        description TEXT NOT NULL,
+        generated_by TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        features_used TEXT NOT NULL,
+        market_conditions TEXT NOT NULL,
+        expected_behavior TEXT NOT NULL,
+        experiment_plan TEXT NOT NULL,
+        result TEXT DEFAULT '',
+        status TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_experiments (
+        experiment_id TEXT PRIMARY KEY,
+        hypothesis_id TEXT NOT NULL,
+        strategy_id TEXT NOT NULL,
+        strategy_version TEXT NOT NULL,
+        dataset_version TEXT NOT NULL,
+        universe TEXT NOT NULL,
+        symbols TEXT NOT NULL,
+        timeframe TEXT NOT NULL,
+        parameters_json TEXT NOT NULL,
+        features_json TEXT NOT NULL,
+        metrics_json TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_strategy_registry (
+        strategy_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        description TEXT NOT NULL,
+        parent_strategy_id TEXT DEFAULT '',
+        created_by TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        status TEXT NOT NULL,
+        universe_json TEXT NOT NULL,
+        timeframes_json TEXT NOT NULL,
+        parameters_json TEXT NOT NULL,
+        rules_json TEXT NOT NULL,
+        robustness_score REAL NOT NULL DEFAULT 0.0,
+        strategy_score REAL NOT NULL DEFAULT 0.0,
+        metrics_json TEXT DEFAULT '{}'
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_strategy_lineage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        parent_id TEXT NOT NULL,
+        child_id TEXT NOT NULL,
+        mutation_description TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        experiment_id TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    )
+    """)
+
     # Inicializar métricas base de las estrategias de los videos si no existen
     cursor.execute("SELECT COUNT(*) FROM strategy_metrics")
     if cursor.fetchone()[0] == 0:

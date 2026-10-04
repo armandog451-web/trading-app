@@ -276,3 +276,67 @@ async def run_schedule_task(req: RunScheduleTaskRequest = Body(...)) -> Dict[str
         )
 
 
+# --- STRATEGY LABORATORY ENDPOINTS ---
+
+class PromoteStrategyRequest(BaseModel):
+    strategy_id: str
+    target_status: str  # RESEARCH, BACKTEST, VALIDATING, CANDIDATE, PAPER, APPROVED, REJECTED, PAUSED
+    reason: str = "Promoción vía API"
+
+
+@app.get("/api/strategy-lab/overview")
+def get_strategy_lab_overview() -> Dict[str, Any]:
+    """Retorna el resumen ejecutivo del Strategy Laboratory."""
+    from ai_trading_agent.strategy_lab.reporting.generator import lab_reporting_generator
+    return lab_reporting_generator.generate_laboratory_overview()
+
+
+@app.get("/api/strategy-lab/strategies")
+def list_lab_strategies(status: Optional[str] = None) -> Dict[str, Any]:
+    """Lista el catálogo de estrategias investigadas y registradas en SQLite."""
+    from ai_trading_agent.strategy_lab.registry.registry import strategy_registry
+    from ai_trading_agent.strategy_lab.core.models import StrategyStatus
+    status_filter = StrategyStatus(status) if status else None
+    strats = strategy_registry.list_strategies(status_filter=status_filter)
+    return {
+        "count": len(strats),
+        "strategies": [s.model_dump() for s in strats]
+    }
+
+
+@app.post("/api/strategy-lab/research/run")
+def run_autonomous_research(symbol: str = Query("SPY")) -> Dict[str, Any]:
+    """Dispara un ciclo autónomo completo de investigación (Hipótesis ➔ Experimento ➔ Robustez ➔ Ranking)."""
+    from ai_trading_agent.strategy_lab.research.agent import ai_research_agent
+    res = ai_research_agent.run_autonomous_research_cycle(symbol=symbol)
+    return res
+
+
+@app.post("/api/strategy-lab/strategy/promote")
+def promote_lab_strategy(req: PromoteStrategyRequest) -> Dict[str, Any]:
+    """Evalúa y promueve una estrategia a través de las puertas del ciclo de vida."""
+    from ai_trading_agent.strategy_lab.lifecycle.manager import lifecycle_manager
+    from ai_trading_agent.strategy_lab.core.models import StrategyStatus
+
+    try:
+        target_enum = StrategyStatus(req.target_status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Estado objetivo inválido: {req.target_status}")
+
+    success, msg, strat = lifecycle_manager.promote_strategy(
+        strategy_id=req.strategy_id,
+        target_status=target_enum,
+        reason=req.reason,
+        actor="HUMAN_OPERATOR"
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+
+    return {
+        "success": True,
+        "message": msg,
+        "strategy": strat.model_dump() if strat else None
+    }
+
+
