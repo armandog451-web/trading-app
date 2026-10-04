@@ -83,10 +83,18 @@ class RobustnessEngine:
         in_sample_sharpe: float = 1.5,
         out_sample_sharpe: float = 1.2
     ) -> RobustnessReport:
-        """
-        Calcula el Robustness Score (0 a 100) agregando resultados de Monte Carlo,
-        estabilidad In-Sample vs Out-of-Sample y resistencia a fricciones.
-        """
+        if not trades or len(trades) == 0:
+            return RobustnessReport(
+                robustness_score=0.0,
+                monte_carlo_drawdown_5th_pct=0.0,
+                monte_carlo_drawdown_95th_pct=0.0,
+                worst_expected_drawdown_pct=0.0,
+                probability_of_failure_pct=100.0,
+                parameter_sensitivity_score=100.0,
+                slippage_stress_resilience_pct=0.0,
+                is_robust=False
+            )
+
         mc = self.run_monte_carlo(trades, initial_capital=initial_capital)
 
         # 1. Degradación IS vs OOS (0 - 30 pts)
