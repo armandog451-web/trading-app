@@ -74,10 +74,25 @@ class LifecycleManager:
         if strat.robustness_score < cfg.min_robustness_score:
             return False, f"ROBUSTEZ INSUFICIENTE: Robustness Score ({strat.robustness_score:.1f}) es menor al mínimo requerido ({cfg.min_robustness_score:.1f})."
 
-        # 3. Puerta de Profit Factor y Sharpe
+        # 3. Puerta de Profit Factor, Sharpe y Economic Edge
         pf = float(metrics.get("profit_factor", 0.0))
         if pf < cfg.min_profit_factor and total_trades > 0:
             return False, f"EXPECTATIVA NEGATIVA: Profit Factor ({pf:.2f}) es menor al mínimo requerido ({cfg.min_profit_factor:.2f})."
+
+        from ai_trading_agent.strategy_lab.discovery.quantitative_hardening import (
+            calculate_economic_edge_score,
+            EconomicEdgeClassification
+        )
+        _, edge_class = calculate_economic_edge_score(
+            profit_factor=pf,
+            expectancy=float(metrics.get("expectancy", metrics.get("expected_value", 0.0))),
+            is_sharpe=float(metrics.get("is_sharpe", metrics.get("sharpe_ratio", 0.0))),
+            oos_sharpe=float(metrics.get("oos_sharpe", 0.0)),
+            trade_count=total_trades
+        )
+
+        if edge_class == EconomicEdgeClassification.NO_EDGE:
+            return False, f"VENTAJA ECONÓMICA NULA: Economic Edge Classification es {edge_class.value} (Profit Factor={pf:.2f})."
 
         return True, "CANDIDATE_GATING_PASSED"
 

@@ -86,6 +86,8 @@ class LabStrategyDefinition(BaseModel):
     parameters: Dict[str, Any] = Field(default_factory=dict)
     rules: Dict[str, Any] = Field(default_factory=dict)
     robustness_score: float = 0.0
+    economic_edge_score: float = 0.0
+    strategy_quality_score: float = 0.0
     strategy_score: float = 0.0
     metrics: Dict[str, Any] = Field(default_factory=dict)
 

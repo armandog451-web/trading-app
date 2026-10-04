@@ -5,14 +5,17 @@ Motor de Pruebas de Robustez Monte Carlo, Perturbación de Parámetros y Estrés
 Calcula el Robustness Score (0 a 100) e identifica la fragilidad de una estrategia.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import random
 import math
 from pydantic import BaseModel
 
 
 class RobustnessReport(BaseModel):
-    robustness_score: float  # 0 a 100
+    robustness_score: float  # Pure robustness score (0 a 100)
+    economic_edge_score: float = 0.0  # 0 a 100
+    economic_edge_classification: str = "NO_EDGE"  # NO_EDGE, WEAK_EDGE, POSITIVE_EDGE
+    strategy_quality_score: float = 0.0  # Composite strategy quality score (0 a 100)
     monte_carlo_drawdown_5th_pct: float
     monte_carlo_drawdown_95th_pct: float
     worst_expected_drawdown_pct: float
@@ -81,11 +84,19 @@ class RobustnessEngine:
         trades: List[Dict[str, Any]],
         initial_capital: float = 100000.0,
         in_sample_sharpe: float = 1.5,
-        out_sample_sharpe: float = 1.2
+        out_sample_sharpe: float = 1.2,
+        profit_factor: float = 1.0,
+        expectancy: float = 0.0,
+        in_sample_pnl: float = 1.0,
+        out_sample_pnl: float = 1.0,
+        high_stress_pnl: Optional[float] = None
     ) -> RobustnessReport:
         if not trades or len(trades) == 0:
             return RobustnessReport(
                 robustness_score=0.0,
+                economic_edge_score=0.0,
+                economic_edge_classification="NO_EDGE",
+                strategy_quality_score=0.0,
                 monte_carlo_drawdown_5th_pct=0.0,
                 monte_carlo_drawdown_95th_pct=0.0,
                 worst_expected_drawdown_pct=0.0,
@@ -112,8 +123,40 @@ class RobustnessEngine:
         total_score = round(min(100.0, oos_stability_score + mc_score + fail_score), 2)
         param_sensitivity = round(max(0.0, (1.0 - sharpe_ratio_retention) * 100.0), 2)
 
+        from ai_trading_agent.strategy_lab.discovery.quantitative_hardening import (
+            calculate_economic_edge_score,
+            calculate_strategy_quality_score
+        )
+
+        edge_score, edge_class = calculate_economic_edge_score(
+            profit_factor=profit_factor,
+            expectancy=expectancy,
+            is_sharpe=in_sample_sharpe,
+            oos_sharpe=out_sample_sharpe,
+            trade_count=len(trades)
+        )
+
+        baseline_pnl = sum(t.get("net_pnl", 0.0) for t in trades)
+        if high_stress_pnl is None:
+            high_stress_pnl = baseline_pnl * 0.60 if baseline_pnl > 0 else 0.0
+
+        quality_score = calculate_strategy_quality_score(
+            economic_edge_score=edge_score,
+            robustness_score=total_score,
+            trade_count=len(trades),
+            is_sharpe=in_sample_sharpe,
+            oos_sharpe=out_sample_sharpe,
+            is_pnl=in_sample_pnl,
+            oos_pnl=out_sample_pnl,
+            baseline_pnl=baseline_pnl,
+            high_stress_pnl=high_stress_pnl
+        )
+
         return RobustnessReport(
             robustness_score=total_score,
+            economic_edge_score=edge_score,
+            economic_edge_classification=edge_class.value if hasattr(edge_class, "value") else str(edge_class),
+            strategy_quality_score=quality_score,
             monte_carlo_drawdown_5th_pct=mc["drawdown_5th"],
             monte_carlo_drawdown_95th_pct=mc["drawdown_95th"],
             worst_expected_drawdown_pct=mc["worst_drawdown"],
@@ -123,9 +166,28 @@ class RobustnessEngine:
             is_robust=total_score >= 65.0
         )
 
-    def run_full_robustness_battery(self, trades: List[Dict[str, Any]], in_sample_sharpe: float = 1.0, out_sample_sharpe: float = 1.0) -> Dict[str, Any]:
+    def run_full_robustness_battery(
+        self,
+        trades: List[Dict[str, Any]],
+        in_sample_sharpe: float = 1.0,
+        out_sample_sharpe: float = 1.0,
+        profit_factor: float = 1.0,
+        expectancy: float = 0.0,
+        in_sample_pnl: float = 1.0,
+        out_sample_pnl: float = 1.0,
+        high_stress_pnl: Optional[float] = None
+    ) -> Dict[str, Any]:
         """Ejecuta la batería completa de robustez y devuelve diccionario de métricas."""
-        report = self.evaluate_robustness(trades, in_sample_sharpe=in_sample_sharpe, out_sample_sharpe=out_sample_sharpe)
+        report = self.evaluate_robustness(
+            trades,
+            in_sample_sharpe=in_sample_sharpe,
+            out_sample_sharpe=out_sample_sharpe,
+            profit_factor=profit_factor,
+            expectancy=expectancy,
+            in_sample_pnl=in_sample_pnl,
+            out_sample_pnl=out_sample_pnl,
+            high_stress_pnl=high_stress_pnl
+        )
         return report.model_dump()
 
 
