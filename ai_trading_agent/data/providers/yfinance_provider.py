@@ -36,7 +36,12 @@ class YFinanceMarketDataProvider(BaseMarketDataProvider):
         try:
             # Mapear intervalos válidos de yfinance
             yf_interval = interval if interval in ["1m", "2m", "5m", "15m", "30m", "60m", "1h", "1d"] else "5m"
-            period = "5d" if yf_interval in ["1m", "2m", "5m", "15m"] else "1mo"
+            if count > 500 or yf_interval in ["15m", "30m", "60m", "1h", "1d"]:
+                period = "60d"
+            elif yf_interval in ["1m", "2m", "5m"]:
+                period = "7d"
+            else:
+                period = "1mo"
 
             ticker = yf.Ticker(symbol)
             df = ticker.history(period=period, interval=yf_interval)
