@@ -40,3 +40,5 @@ Thumbs.db
 fetch_repo.ps1
 *token*
 *.token
+ai_trading_agent/scratch/
+scratch/

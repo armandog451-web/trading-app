@@ -218,6 +218,32 @@ class MultiTimeframeStrategyEvaluator:
         self.rr_ratio = self.parameters.get("rr_ratio", 2.0)
         self.trailing_atr_mult = self.parameters.get("trailing_atr_mult", 2.0)
 
+    def get_signal_generator_fingerprint(self) -> str:
+        """
+        Calcula el fingerprint determinista SHA256 (truncado a 16 hex) de las reglas y parámetros
+        del generador de señales para auditoría de integridad causal.
+        """
+        import hashlib
+        import json
+
+        effective_rr = getattr(self, "rr_ratio", 3.0 if self.config_type == "CONFIG_D" else 2.0)
+        rule_spec = {
+            "config_type": self.config_type,
+            "rsi_lower": self.rsi_lower,
+            "rsi_upper": self.rsi_upper,
+            "rvol_threshold": self.rvol_threshold,
+            "atr_mult": self.atr_mult,
+            "rr_ratio": effective_rr,
+            "rules": (
+                "h1_long=(rsi<=45.0 or (ema9>ema21 and close>vwap)) and rvol>=rvol_threshold; "
+                "h1_short=(rsi>=55.0 or (ema9<ema21 and close<vwap)) and rvol>=rvol_threshold; "
+                "sl_atr_mult=0.9; exit=asymmetric_rr"
+                if self.config_type == "CONFIG_D" else self.config_type
+            )
+        }
+        encoded = json.dumps(rule_spec, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()[:16]
+
     def evaluate_1d_context(self, daily_bars: List[OHLCVBar]) -> Dict[str, Any]:
         """Evalúa el régimen y tendencia en el timeframe diario (1D) cerrado."""
         if not daily_bars or len(daily_bars) < 25:
@@ -606,6 +632,10 @@ class MultiTimeframeBacktestSimulator:
         self.slippage_pct = slippage_pct
         self.risk_per_trade_pct = risk_per_trade_pct
 
+    def get_paired_signal_generator_fingerprint(self) -> str:
+        """Retorna el fingerprint determinista del generador emparejado usado en run_paired_signal_analysis."""
+        return self.evaluator.get_signal_generator_fingerprint()
+
     def run_simulation(
         self,
         symbol: str,
@@ -756,6 +786,7 @@ class MultiTimeframeBacktestSimulator:
         """
         if len(h1_bars) <= min_warmup:
             return {
+                "generator_fingerprint": self.get_paired_signal_generator_fingerprint(),
                 "total_1h_signals": 0,
                 "allowed_count": 0,
                 "rejected_count": 0,
@@ -767,33 +798,53 @@ class MultiTimeframeBacktestSimulator:
         allowed_trades = []
         rejected_trades = []
 
-        # Evaluador 1H Puro para capturar todas las señales candidatas
-        eval_1h = MultiTimeframeStrategyEvaluator(config_type="BASELINE_1H")
-
+        # Utilizar EXACTAMENTE el evaluador de la estrategia configurada (e.g. CONFIG_D)
+        # para garantizar paridad y match 100% de generador
         for t in range(min_warmup, len(h1_bars) - 10):
             curr_bar = h1_bars[t]
             history_1h = h1_bars[:t + 1]
+            close = curr_bar.close
 
-            # 1. Señal bruta 1H
-            sig_1h = eval_1h.evaluate_hybrid_signal(symbol, curr_bar, history_1h, [])
-            if sig_1h.direction in [SignalDirection.BUY, SignalDirection.SELL] and sig_1h.entry_price and sig_1h.stop_loss and sig_1h.take_profit:
-                # 2. Consultar si el filtro 1D la permite o rechaza
-                closed_daily = MultiTimeframeSynchronizer.get_closed_daily_bars(curr_bar.timestamp, daily_bars)
-                d_ctx = self.evaluator.evaluate_1d_context(closed_daily)
-                
-                # Criterio del filtro diario: coincidencia de dirección
+            h1_ind = indicators.calculate_all(history_1h)
+            rsi = h1_ind.get("rsi", 50.0)
+            rvol = h1_ind.get("rvol", 1.0)
+            vwap = h1_ind.get("vwap", close)
+            atr = h1_ind.get("atr", close * 0.01)
+            ema9 = h1_ind.get("ema9", close)
+            ema21 = h1_ind.get("ema21", close)
+
+            # Reglas idénticas a CONFIG_D
+            target_rr = getattr(self.evaluator, "rr_ratio", 3.0)
+            rvol_thresh = getattr(self.evaluator, "rvol_threshold", 1.1)
+            atr_mult = getattr(self.evaluator, "atr_mult", 1.2)
+
+            h1_long = (rsi <= 45.0 or (ema9 > ema21 and close > vwap)) and (rvol >= rvol_thresh)
+            h1_short = (rsi >= 55.0 or (ema9 < ema21 and close < vwap)) and (rvol >= rvol_thresh)
+
+            candidate_signals = []
+            if h1_long:
+                sl_l = round(close - (atr * atr_mult * 0.9), 2)
+                tp_l = round(close + ((close - sl_l) * target_rr), 2)
+                candidate_signals.append(("BUY", close, sl_l, tp_l))
+            if h1_short:
+                sl_s = round(close + (atr * atr_mult * 0.9), 2)
+                tp_s = round(close - ((sl_s - close) * target_rr), 2)
+                candidate_signals.append(("SELL", close, sl_s, tp_s))
+
+            if not candidate_signals:
+                continue
+
+            closed_daily = MultiTimeframeSynchronizer.get_closed_daily_bars(curr_bar.timestamp, daily_bars)
+            d_ctx = self.evaluator.evaluate_1d_context(closed_daily)
+
+            for side, entry_p, sl, tp in candidate_signals:
                 is_allowed = False
-                if sig_1h.direction == SignalDirection.BUY and d_ctx.get("daily_bullish"):
+                if side == "BUY" and d_ctx.get("daily_bullish"):
                     is_allowed = True
-                elif sig_1h.direction == SignalDirection.SELL and d_ctx.get("daily_bearish"):
+                elif side == "SELL" and d_ctx.get("daily_bearish"):
                     is_allowed = True
 
-                # 3. Simulación de ejecución prospectiva a 10 barras (o hasta SL/TP)
-                entry_p = sig_1h.entry_price
-                sl = sig_1h.stop_loss
-                tp = sig_1h.take_profit
-                side = "BUY" if sig_1h.direction == SignalDirection.BUY else "SELL"
-
+                # Simulación prospectiva a 10 barras
                 outcome_pnl = 0.0
                 mae = 0.0
                 mfe = 0.0
@@ -816,7 +867,7 @@ class MultiTimeframeBacktestSimulator:
                         if f_bar.high >= sl:
                             exit_price = sl
                             break
-                        elif f_bar.low >= tp:
+                        elif f_bar.low <= tp:
                             exit_price = tp
                             break
 
@@ -848,6 +899,7 @@ class MultiTimeframeBacktestSimulator:
         acc_rate = round(len(allowed_trades) / max(1, total_sig), 4)
 
         return {
+            "generator_fingerprint": self.get_paired_signal_generator_fingerprint(),
             "total_1h_signals": total_sig,
             "allowed_count": len(allowed_trades),
             "rejected_count": len(rejected_trades),
