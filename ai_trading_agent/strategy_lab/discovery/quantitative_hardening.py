@@ -418,3 +418,19 @@ def calculate_generalization_stability_score(
     total_gss = min(100.0, max(0.0, pf_pts + exp_pts + sharpe_pts + trade_pts))
     return round(total_gss, 2)
 
+
+def calculate_movement_to_cost_ratio(
+    avg_favorable_price_move: float,
+    round_trip_cost_per_share: float
+) -> float:
+    """
+    Calcula el Movement-to-Cost Ratio (MCR) — FASE 10.
+    Métrica diagnóstica exclusiva para evaluar si el movimiento de precio esperado
+    amortiza holgadamente los costes de fricción por acción (comisiones + 2x slippage).
+    MCR = Average Favorable Price Movement ($) / Round-Trip Friction ($)
+    """
+    if round_trip_cost_per_share <= 0.0 or avg_favorable_price_move <= 0.0:
+        return 0.0
+    return round(avg_favorable_price_move / round_trip_cost_per_share, 2)
+
+
