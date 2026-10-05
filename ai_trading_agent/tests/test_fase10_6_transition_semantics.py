@@ -66,16 +66,21 @@ def test_paper_transition_requires_robustness_not_sqs():
     # Temporalmente lo registramos para evaluar promote_strategy
     strategy_registry.register_strategy(strat)
     
-    lm = LifecycleManager()
-    success, msg, updated_strat = lm.promote_strategy(
-        strategy_id="D21_Candidate_Mock",
-        target_status=StrategyStatus.PAPER,
-        reason="Test paper promotion"
-    )
-    assert success is True, f"Promotion to PAPER failed: {msg}"
-    assert updated_strat.status == StrategyStatus.PAPER
-
-    # Registro mock validado
+    try:
+        lm = LifecycleManager()
+        success, msg, updated_strat = lm.promote_strategy(
+            strategy_id="D21_Candidate_Mock",
+            target_status=StrategyStatus.PAPER,
+            reason="Test paper promotion"
+        )
+        assert success is True, f"Promotion to PAPER failed: {msg}"
+        assert updated_strat.status == StrategyStatus.PAPER
+    finally:
+        from database import get_connection
+        conn = get_connection()
+        conn.cursor().execute("DELETE FROM lab_strategy_registry WHERE strategy_id = 'D21_Candidate_Mock'")
+        conn.commit()
+        conn.close()
 
 
 def test_approved_transition_strictly_blocks_sqs_below_70():
@@ -98,13 +103,20 @@ def test_approved_transition_strictly_blocks_sqs_below_70():
     )
     strategy_registry.register_strategy(strat)
 
-    lm = LifecycleManager()
-    success, msg, updated_strat = lm.promote_strategy(
-        strategy_id="D21_Paper_Mock",
-        target_status=StrategyStatus.APPROVED,
-        reason="Test approved promotion"
-    )
-    assert success is False
-    assert "Strategy Score (69.2) es menor al mínimo requerido (70.0)" in msg
-    assert updated_strat.status == StrategyStatus.PAPER
+    try:
+        lm = LifecycleManager()
+        success, msg, updated_strat = lm.promote_strategy(
+            strategy_id="D21_Paper_Mock",
+            target_status=StrategyStatus.APPROVED,
+            reason="Test approved promotion"
+        )
+        assert success is False
+        assert "Strategy Score (69.2) es menor al mínimo requerido (70.0)" in msg
+        assert updated_strat.status == StrategyStatus.PAPER
+    finally:
+        from database import get_connection
+        conn = get_connection()
+        conn.cursor().execute("DELETE FROM lab_strategy_registry WHERE strategy_id = 'D21_Paper_Mock'")
+        conn.commit()
+        conn.close()
 
