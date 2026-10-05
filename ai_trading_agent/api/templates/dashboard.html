@@ -445,6 +445,63 @@
         </div>
     </div>
 
+    <!-- TAB 6: STRATEGY LABORATORY -->
+    <div id="tab-strategylab" class="panel" style="display: none;">
+        <div class="panel-title">
+            <span>🧪 Autonomous Strategy Laboratory / Research Engine</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Investigación Autónoma | Ciclo de Vida Formal | Cero Acceso a Broker</span>
+        </div>
+
+        <div class="alert-box box-success" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>Aislamiento de Investigación:</strong> El laboratorio prueba, muta y evalúa estrategias de forma autónoma (IS/OOS/Walk-Forward/Monte Carlo).
+                Sólo promociona estrategias aprobadas al Trading Agent. El Risk Engine mantiene prioridad absoluta.
+            </div>
+            <button class="btn btn-primary" onclick="runAutonomousResearch()" style="white-space: nowrap;">⚡ Ejecutar Ciclo Autónomo</button>
+        </div>
+
+        <div class="grid-stats" style="margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">Estrategias Registradas</div>
+                <div class="stat-value" id="labTotalStrats">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">En Investigación / Backtest</div>
+                <div class="stat-value" id="labResearchCount" style="color: var(--accent-cyan);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">En Paper Validation</div>
+                <div class="stat-value" id="labPaperCount" style="color: var(--yellow);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Aprobadas para Operar</div>
+                <div class="stat-value" id="labApprovedCount" style="color: var(--green);">0</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-weight: 700; font-size: 14px; color: var(--text-muted);">
+            Catálogo de Estrategias y Registro de Linaje
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID / Versión</th>
+                        <th>Nombre / Descripción</th>
+                        <th>Estado Actual</th>
+                        <th>Robustness (0-100)</th>
+                        <th>Strategy Score</th>
+                        <th>Acción de Promoción</th>
+                    </tr>
+                </thead>
+                <tbody id="labStrategyTable">
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando catálogo del laboratorio...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
         let currentKillSwitch = false;
 
@@ -549,26 +606,21 @@
         }
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tab)) {
+                    b.classList.add('active');
+                }
+            });
             document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
             
-            const evtTarget = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
-            if (evtTarget && evtTarget.classList) evtTarget.classList.add('active');
+            const targetPanel = document.getElementById('tab-' + tab);
+            if (targetPanel) targetPanel.style.display = 'block';
 
-            if (tab === 'analyzer') {
-                document.getElementById('tab-analyzer').style.display = 'block';
-            } else if (tab === 'backtest') {
-                document.getElementById('tab-backtest').style.display = 'block';
-            } else if (tab === 'journal') {
-                document.getElementById('tab-journal').style.display = 'block';
-                loadJournal();
-            } else if (tab === 'scanner') {
-                document.getElementById('tab-scanner').style.display = 'block';
-                loadScannerStatus();
-            } else if (tab === 'schedule') {
-                document.getElementById('tab-schedule').style.display = 'block';
-                loadScheduleStatus();
-            }
+            if (tab === 'journal') loadJournal();
+            else if (tab === 'scanner') loadScannerStatus();
+            else if (tab === 'schedule') loadScheduleStatus();
+            else if (tab === 'strategylab') loadStrategyLab();
         }
 
         async function loadScheduleStatus() {
@@ -987,77 +1039,6 @@
                 `;
                 container.appendChild(card);
             });
-        }
-
-    <!-- TAB 6: STRATEGY LABORATORY -->
-    <div id="tab-strategylab" class="panel" style="display: none;">
-        <div class="panel-title">
-            <span>🧪 Autonomous Strategy Laboratory / Research Engine</span>
-            <span style="font-size: 12px; color: var(--text-muted);">Investigación Autónomas | Ciclo de Vida Formal | Cero Acceso a Broker</span>
-        </div>
-
-        <div class="alert-box box-success" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong>Aislamiento de Investigación:</strong> El laboratorio prueba, muta y evalúa estrategias de forma autónoma (IS/OOS/Walk-Forward/Monte Carlo).
-                Sólo promociona estrategias aprobadas al Trading Agent. El Risk Engine mantiene prioridad absoluta.
-            </div>
-            <button class="btn btn-primary" onclick="runAutonomousResearch()" style="white-space: nowrap;">⚡ Ejecutar Ciclo Autónomo</button>
-        </div>
-
-        <div class="grid-stats" style="margin-bottom: 20px;">
-            <div class="stat-card">
-                <div class="stat-label">Estrategias Registradas</div>
-                <div class="stat-value" id="labTotalStrats">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">En Investigación / Backtest</div>
-                <div class="stat-value" id="labResearchCount" style="color: var(--accent-cyan);">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">En Paper Validation</div>
-                <div class="stat-value" id="labPaperCount" style="color: var(--yellow);">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Aprobadas para Operar</div>
-                <div class="stat-value" id="labApprovedCount" style="color: var(--green);">0</div>
-            </div>
-        </div>
-
-        <div style="margin-bottom: 12px; font-weight: 700; font-size: 14px; color: var(--text-muted);">
-            Catálogo de Estrategias y Registro de Linaje
-        </div>
-
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID / Versión</th>
-                        <th>Nombre / Descripción</th>
-                        <th>Estado Actual</th>
-                        <th>Robustness (0-100)</th>
-                        <th>Strategy Score</th>
-                        <th>Acción de Promoción</th>
-                    </tr>
-                </thead>
-                <tbody id="labStrategyTable">
-                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Cargando catálogo del laboratorio...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
-            
-            event.target.classList.add('active');
-            const targetPanel = document.getElementById('tab-' + tabId);
-            if(targetPanel) targetPanel.style.display = 'block';
-
-            if(tabId === 'schedule') loadScheduleTab();
-            if(tabId === 'scanner') loadWeekendScanTab();
-            if(tabId === 'strategylab') loadStrategyLab();
         }
 
         async function loadStrategyLab() {
