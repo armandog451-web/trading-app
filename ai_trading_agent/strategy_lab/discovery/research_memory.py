@@ -163,3 +163,53 @@ class ResearchMemory:
     def get_all_observations(self) -> List[MemoryObservation]:
         """Devuelve el historial completo de observaciones."""
         return list(self._in_memory_observations)
+
+    def record_dataset_usage(
+        self,
+        dataset_name: str,
+        query_type: str = "ranking"  # ranking, selection, mutation, exploitation
+    ) -> Dict[str, int]:
+        """
+        Registra el uso adaptativo de particiones de datos (Fase 9).
+        Si un dataset se utiliza para ranking, selección o explotación repetida,
+        queda automáticamente marcado como RESEARCH_VALIDATION.
+        """
+        if not hasattr(self, "_dataset_usage"):
+            self._dataset_usage: Dict[str, Dict[str, int]] = {}
+
+        if dataset_name not in self._dataset_usage:
+            self._dataset_usage[dataset_name] = {
+                "number_of_queries": 0,
+                "number_of_rankings": 0,
+                "number_of_selection_decisions": 0,
+                "number_of_mutation_decisions": 0,
+                "number_of_exploitations": 0
+            }
+
+        counts = self._dataset_usage[dataset_name]
+        counts["number_of_queries"] += 1
+        if query_type == "ranking":
+            counts["number_of_rankings"] += 1
+        elif query_type == "selection":
+            counts["number_of_selection_decisions"] += 1
+        elif query_type == "mutation":
+            counts["number_of_mutation_decisions"] += 1
+        elif query_type == "exploitation":
+            counts["number_of_exploitations"] += 1
+
+        return counts
+
+    def get_dataset_usage(self, dataset_name: Optional[str] = None) -> Dict[str, Any]:
+        """Devuelve el conteo de uso adaptativo acumulado por dataset."""
+        if not hasattr(self, "_dataset_usage"):
+            self._dataset_usage = {}
+        if dataset_name:
+            return self._dataset_usage.get(dataset_name, {
+                "number_of_queries": 0,
+                "number_of_rankings": 0,
+                "number_of_selection_decisions": 0,
+                "number_of_mutation_decisions": 0,
+                "number_of_exploitations": 0
+            })
+        return dict(self._dataset_usage)
+

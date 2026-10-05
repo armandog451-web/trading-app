@@ -348,3 +348,73 @@ class SymbolCoverageEvaluator:
             "validation_note": f"Evaluación realizada en {len(evaluated_symbols)} símbolo(s)." if is_multisymbol else "ADVERTENCIA: Evaluación realizada en un ÚNICO símbolo. No declarar validación multisímbolo.",
             "symbol_metrics": metrics_per_symbol
         }
+
+
+def calculate_generalization_stability_score(
+    window_pfs: List[float],
+    window_expectancies: List[float],
+    window_sharpes: List[float],
+    window_trades: List[int]
+) -> float:
+    """
+    Calcula el Generalization Stability Score (GSS, 0 a 100) — FASE 9.
+    Métrica diagnóstica exclusiva para research prioritization. No modifica el SQS oficial.
+    Evalúa:
+    1. Consistencia del Profit Factor entre ventanas (40 pts)
+    2. Consistencia de la Expectancy (25 pts)
+    3. Consistencia del Sharpe Ratio (20 pts)
+    4. Suficiencia de operaciones en todas las ventanas (15 pts)
+    Penaliza colapsos severos en cualquier ventana (ej. PF < 0.80).
+    """
+    import numpy as np
+    import math
+
+    if not window_pfs or len(window_pfs) < 2:
+        return 0.0
+
+    valid_pfs = [p for p in window_pfs if not math.isnan(p) and not math.isinf(p)]
+    if len(valid_pfs) < len(window_pfs):
+        return 0.0
+
+    # 1. Consistencia de PF (40 pts)
+    min_pf = min(valid_pfs)
+    mean_pf = float(np.mean(valid_pfs))
+    std_pf = float(np.std(valid_pfs))
+
+    if min_pf <= 0.0:
+        pf_pts = 0.0
+    elif min_pf >= 1.05 and std_pf <= 0.20:
+        pf_pts = 40.0
+    elif min_pf >= 1.00:
+        pf_pts = max(10.0, 40.0 - (std_pf * 50.0))
+    elif min_pf >= 0.85:
+        pf_pts = max(5.0, 20.0 - (std_pf * 30.0))
+    else:
+        pf_pts = 0.0  # Colapso en alguna ventana
+
+    # 2. Consistencia de Expectancy (25 pts)
+    valid_exps = [e for e in window_expectancies if not math.isnan(e) and not math.isinf(e)]
+    positive_exp_count = sum(1 for e in valid_exps if e > 0)
+    exp_ratio = positive_exp_count / max(1, len(valid_exps))
+    exp_pts = exp_ratio * 25.0
+
+    # 3. Consistencia de Sharpe (20 pts)
+    valid_sharpes = [s for s in window_sharpes if not math.isnan(s) and not math.isinf(s)]
+    positive_sharpe_count = sum(1 for s in valid_sharpes if s > 0)
+    sharpe_ratio = positive_sharpe_count / max(1, len(valid_sharpes))
+    sharpe_pts = sharpe_ratio * 20.0
+
+    # 4. Suficiencia de Trades (15 pts)
+    min_trades = min(window_trades) if window_trades else 0
+    if min_trades >= 30:
+        trade_pts = 15.0
+    elif min_trades >= 15:
+        trade_pts = 10.0
+    elif min_trades >= 8:
+        trade_pts = 5.0
+    else:
+        trade_pts = 0.0
+
+    total_gss = min(100.0, max(0.0, pf_pts + exp_pts + sharpe_pts + trade_pts))
+    return round(total_gss, 2)
+

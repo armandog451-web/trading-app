@@ -303,13 +303,70 @@ class ExecutionAwareStrategyEvaluator:
             elif bear_cond and (not self.use_1d_context or d_ctx.get("daily_bearish")):
                 direction = SignalDirection.SELL
 
-        # 6. Failed Breakout Reversal
+        # 6. Failed Breakout Reversal (Phase 8 Baseline)
         elif self.entry_family == "failed_breakout_reversal":
             bull_reversal = (bar.low < low_20) and (close > low_20) and (rsi < 40.0)
             bear_reversal = (bar.high > high_20) and (close < high_20) and (rsi > 60.0)
             if bull_reversal:
                 direction = SignalDirection.BUY
             elif bear_reversal:
+                direction = SignalDirection.SELL
+
+        # --- FAMILIAS DE NUEVA GENERACIÓN: FASE 9 ---
+        # 7. Trend Persistence (Seguimiento de tendencia estricto con confirmación de pendiente y volumen institucional)
+        elif self.entry_family == "trend_persistence":
+            prev_ema9 = float(features["ema9"][bar_idx - 1])
+            prev_ema21 = float(features["ema21"][bar_idx - 1])
+            slope_bull = (ema9 > prev_ema9) and (ema21 > prev_ema21) and (ema9 > ema21)
+            slope_bear = (ema9 < prev_ema9) and (ema21 < prev_ema21) and (ema9 < ema21)
+            bull_cond = slope_bull and (close > vwap) and (rvol >= 1.2) and (52.0 <= rsi <= 68.0)
+            bear_cond = slope_bear and (close < vwap) and (rvol >= 1.2) and (32.0 <= rsi <= 48.0)
+            if bull_cond and (not self.use_1d_context or d_ctx.get("daily_bullish")):
+                direction = SignalDirection.BUY
+            elif bear_cond and (not self.use_1d_context or d_ctx.get("daily_bearish")):
+                direction = SignalDirection.SELL
+
+        # 8. Compression-Release Breakout (Ruptura tras compresión extrema de volatilidad)
+        elif self.entry_family == "compression_release_breakout":
+            was_compressed = (atr < avg_atr_20 * 0.85) or (features.get("rvol", [1.0])[bar_idx - 1] < 0.8)
+            vol_release = (rvol >= 1.5) and (bar.close > bar.open if close > high_20 * 0.995 else bar.close < bar.open)
+            bull_cond = was_compressed and (close >= high_20) and vol_release
+            bear_cond = was_compressed and (close <= low_20) and vol_release
+            if bull_cond and (not self.use_1d_context or d_ctx.get("daily_bullish")):
+                direction = SignalDirection.BUY
+            elif bear_cond and (not self.use_1d_context or d_ctx.get("daily_bearish")):
+                direction = SignalDirection.SELL
+
+        # 9. Regime-Conditioned Momentum (Momentum solo cuando el régimen diario está fuertemente alineado)
+        elif self.entry_family == "regime_conditioned_momentum":
+            is_daily_bull = d_ctx.get("daily_bullish", False) if d_ctx else False
+            is_daily_bear = d_ctx.get("daily_bearish", False) if d_ctx else False
+            bull_cond = is_daily_bull and (close > ema9 > ema21) and (rsi >= 55.0) and (rvol >= 1.15)
+            bear_cond = is_daily_bear and (close < ema9 < ema21) and (rsi <= 45.0) and (rvol >= 1.15)
+            if bull_cond:
+                direction = SignalDirection.BUY
+            elif bear_cond:
+                direction = SignalDirection.SELL
+
+        # 10. Multi-Asset Relative Strength (Direccionalidad adaptativa condicionada a RVOL y distancia a VWAP)
+        elif self.entry_family == "multi_asset_relative_strength":
+            vwap_dist = (close - vwap) / (vwap + 1e-9)
+            bull_cond = (vwap_dist > 0.003) and (rvol >= 1.3) and (ema9 > ema21) and (rsi >= 50.0)
+            bear_cond = (vwap_dist < -0.003) and (rvol >= 1.3) and (ema9 < ema21) and (rsi <= 50.0)
+            if bull_cond and (not self.use_1d_context or d_ctx.get("daily_bullish")):
+                direction = SignalDirection.BUY
+            elif bear_cond and (not self.use_1d_context or d_ctx.get("daily_bearish")):
+                direction = SignalDirection.SELL
+
+        # 11. Volatility-Adjusted Directional (Setups de rango amplio con stop amplio y target amplio)
+        elif self.entry_family == "volatility_adjusted_directional":
+            norm_vol = atr / (close + 1e-9)
+            has_vol = (norm_vol >= 0.005) and (rvol >= 1.25)
+            bull_cond = has_vol and (close > vwap) and (ema9 > ema21) and (rsi > 48.0)
+            bear_cond = has_vol and (close < vwap) and (ema9 < ema21) and (rsi < 52.0)
+            if bull_cond and (not self.use_1d_context or d_ctx.get("daily_bullish")):
+                direction = SignalDirection.BUY
+            elif bear_cond and (not self.use_1d_context or d_ctx.get("daily_bearish")):
                 direction = SignalDirection.SELL
 
         if direction == SignalDirection.NO_TRADE:
