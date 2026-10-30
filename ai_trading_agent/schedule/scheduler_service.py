@@ -502,7 +502,7 @@ class MarketScheduleService:
             evaluated_symbols[symbol] = f"EXECUTED_MOOMOO ({filled_order.order_id})"
             executed_orders.append(alert_payload)
 
-        elapsed_ms = (time.perf_counter() - t0_eval) * 1000.0
+        elapsed_ms = (pytime.perf_counter() - t0_eval) * 1000.0
         now_utc = datetime.now(timezone.utc).isoformat()
         
         # Siguiente evaluación a las 16:15 ET del próximo día hábil
