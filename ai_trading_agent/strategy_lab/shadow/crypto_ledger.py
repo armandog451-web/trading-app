@@ -225,3 +225,64 @@ class ShadowEvidenceLedger:
     def get_entry_count(self) -> int:
         """Devuelve el número total de entradas persistidas."""
         return len(self.entries)
+
+    def seal_checkpoint(self, checkpoint_name: str, strategy_fingerprint: str, notes: str = "") -> ShadowLedgerEntry:
+        """
+        Sella periódicamente el estado del ledger mediante un bloque de control criptográfico (Bloque E y Fase 7.4.1).
+        Ancla el conteo de bloques, el estado patrimonial y la marca temporal certificada.
+        """
+        ts = datetime.utcnow().isoformat()
+        entry_id = f"SEAL-{self.strategy_id}-{checkpoint_name}-{ts[:10]}"
+        current_equity = self.entries[-1].portfolio_equity if self.entries else 100_000.0
+        current_cash = self.entries[-1].portfolio_cash if self.entries else 100_000.0
+        current_dd = self.entries[-1].drawdown_pct if self.entries else 0.0
+
+        checkpoint_payload = {
+            "checkpoint_name": checkpoint_name,
+            "notes": notes,
+            "anchored_entries_count": len(self.entries),
+            "anchored_head_hash": self.get_latest_hash()
+        }
+
+        checkpoint_hash = hashlib.sha256(json.dumps(checkpoint_payload, sort_keys=True).encode('utf-8')).hexdigest()
+
+        return self.append_entry(
+            entry_id=entry_id,
+            market_date=ts[:10],
+            symbol="ALL_PORTFOLIO",
+            event_type=ShadowEventType.CHECKPOINT_SEALED,
+            signal_direction="NO_TRADE",
+            reason=f"Sello criptográfico de punto de control: {checkpoint_name}. {notes}",
+            strategy_fingerprint=strategy_fingerprint,
+            bar_hash=checkpoint_hash,
+            portfolio_cash=current_cash,
+            portfolio_equity=current_equity,
+            drawdown_pct=current_dd,
+            timestamp_utc=ts
+        )
+
+    @staticmethod
+    def verify_dynamic_broker_isolation() -> Tuple[bool, List[str]]:
+        """
+        Verificación dinámica estricta en tiempo de ejecución (Fase 7.4.1):
+        1. Comprueba que ningún módulo o adaptador de Moomoo / IBKR esté cargado en sys.modules.
+        2. Comprueba que no existan variables de entorno que habiliten trading LIVE.
+        """
+        import sys
+        import os
+        forbidden_modules = [
+            "futu",
+            "moomoo",
+            "ib_insync",
+            "interactive_brokers"
+        ]
+        violations = []
+        for mod in forbidden_modules:
+            if mod in sys.modules:
+                violations.append(f"FORBIDDEN_MODULE_LOADED_IN_SYS_MODULES: {mod}")
+
+        if os.environ.get("ENABLE_LIVE_TRADING", "false").lower() in ("true", "1", "yes"):
+            violations.append("LIVE_TRADING_ENABLED_IN_ENV")
+
+        is_isolated = len(violations) == 0
+        return is_isolated, violations

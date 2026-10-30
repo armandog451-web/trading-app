@@ -11,8 +11,9 @@ from datetime import datetime
 
 
 class ShadowCampaignStatus(str, Enum):
-    """Estados canónicos permitidos para una campaña Shadow (Bloque A)."""
+    """Estados canónicos permitidos para una campaña Shadow (Bloque A y Fase 7.4.1)."""
     FROZEN = "FROZEN"
+    ACTIVATION_READY = "ACTIVATION_READY"
     COLLECTING_EVIDENCE = "COLLECTING_EVIDENCE"
     PAUSED_DATA_QUALITY = "PAUSED_DATA_QUALITY"
     PAUSED_RUNTIME = "PAUSED_RUNTIME"
@@ -42,6 +43,8 @@ class ShadowEventType(str, Enum):
     GAP_EVENT = "GAP_EVENT"
     DATA_QUALITY_ALERT = "DATA_QUALITY_ALERT"
     MILESTONE_REACHED = "MILESTONE_REACHED"
+    CHECKPOINT_SEALED = "CHECKPOINT_SEALED"
+    ACTIVATION_CERTIFIED = "ACTIVATION_CERTIFIED"
 
 
 class ShadowValidationClock(BaseModel):
@@ -115,7 +118,8 @@ class ShadowLedgerEntry(BaseModel):
 
 
 class CampaignFreezeManifest(BaseModel):
-    """Manifiesto de congelamiento criptográfico inmutable (Bloque A)."""
+    """Manifiesto de congelamiento criptográfico inmutable (Bloque A y Fase 7.4.1)."""
+    manifest_version: str = "1.1"
     campaign_id: str
     strategy_id: str
     hypothesis_id: str
@@ -127,7 +131,10 @@ class CampaignFreezeManifest(BaseModel):
     code_sha256: str
     parameters_sha256: str
     combined_strategy_fingerprint_sha256: str
+    market_timezone: str = "America/New_York"
+    t0_local_time: str = "2026-10-30T16:00:00-04:00 (EDT)"
     t0_timestamp_utc: str
+    t0_activation_approved_utc: Optional[str] = None
     t0_first_prospective_session: str
     universe_symbols: List[str]
     capital_allocation_usd: float = 100_000.0

@@ -60,7 +60,7 @@ def test_01_cryptographic_parameter_freeze_integrity(freeze_manifests):
         assert len(m.code_sha256) == 64, f"Invalid code SHA256 length for {sid}"
         assert len(m.parameters_sha256) == 64, f"Invalid params SHA256 length for {sid}"
         assert len(m.combined_strategy_fingerprint_sha256) == 64, f"Invalid combined fingerprint length for {sid}"
-        assert m.status == ShadowCampaignStatus.COLLECTING_EVIDENCE
+        assert m.status in (ShadowCampaignStatus.ACTIVATION_READY, ShadowCampaignStatus.COLLECTING_EVIDENCE)
         assert m.execution_policy == "SIGNAL_AT_CLOSE_T_EXECUTE_AT_OPEN_T_PLUS_1"
         assert m.capital_allocation_usd == 100_000.0
 
