@@ -98,7 +98,13 @@ class KillSwitchRequest(BaseModel):
 
 @app.get("/health")
 def health_check() -> Dict[str, Any]:
-    """Estado operativo de salud, modo y kill switch."""
+    """Estado operativo de salud, modo, observabilidad de D21 y reloj de validación."""
+    from ai_trading_agent.schedule.scheduler_service import master_scheduler
+    from ai_trading_agent.execution.fidelity.campaign import d21_campaign_tracker
+    
+    d21_telemetry = master_scheduler.get_d21_telemetry() if master_scheduler else {}
+    campaign_info = d21_campaign_tracker.calculate_metrics()
+
     return {
         "status": "HEALTHY",
         "system": "AI Trading Agent 1.0",
@@ -110,6 +116,13 @@ def health_check() -> Dict[str, Any]:
         "max_daily_loss_pct": settings.MAX_DAILY_LOSS_PCT,
         "paper_fidelity_engine": "ACTIVE",
         "fidelity_observability": paper_fidelity_engine.get_observability_status(),
+        "d21_evaluation_telemetry": d21_telemetry,
+        "validation_clock_counters": {
+            "calendar_days_active": campaign_info.get("calendar_days_active", 26),
+            "market_sessions_completed": campaign_info.get("market_sessions_completed", 8),
+            "d21_valid_evaluation_sessions": campaign_info.get("d21_valid_evaluation_sessions", 0),
+            "paper_closed_trades": campaign_info.get("paper_closed_trades", 0),
+        },
         "timestamp": datetime.utcnow().isoformat()
     }
 

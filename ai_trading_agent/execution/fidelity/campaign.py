@@ -63,7 +63,22 @@ class PaperValidationCampaignTracker:
         # 3. Contar trades cerrados reales en SQLite
         closed_trades = self._get_closed_paper_trades_count()
 
-        # 4. Estado de cumplimiento
+        # 4. Cálculo de las 4 métricas independientes institucionales
+        calendar_days_active = calendar_days
+        
+        # Sesiones de mercado completadas (días hábiles lunes a viernes desde CANONICAL_RUNTIME_RESTORED hasta ayer)
+        market_sessions_completed = 0
+        cur_session = self.restored_date
+        while cur_session < today:
+            if cur_session.weekday() < 5:  # Lunes a Viernes
+                market_sessions_completed += 1
+            cur_session += timedelta(days=1)
+
+        # Sesiones bursátiles con evaluación efectiva de D21 registradas
+        d21_valid_evaluation_sessions = self._get_d21_valid_evaluations_count()
+        paper_closed_trades = closed_trades
+
+        # 5. Estado de cumplimiento
         meets_days = verified_days >= self.required_verified_days
         meets_trades = closed_trades >= self.required_closed_trades
         ready_for_committee_review = meets_days and meets_trades
@@ -86,11 +101,41 @@ class PaperValidationCampaignTracker:
             "closed_paper_trades_count": closed_trades,
             "target_closed_paper_trades": self.required_closed_trades,
             "trades_remaining": max(0, self.required_closed_trades - closed_trades),
+            "validation_clock_counters": {
+                "calendar_days_active": calendar_days_active,
+                "market_sessions_completed": market_sessions_completed,
+                "d21_valid_evaluation_sessions": d21_valid_evaluation_sessions,
+                "paper_closed_trades": paper_closed_trades,
+            },
+            "calendar_days_active": calendar_days_active,
+            "market_sessions_completed": market_sessions_completed,
+            "d21_valid_evaluation_sessions": d21_valid_evaluation_sessions,
+            "paper_closed_trades": paper_closed_trades,
             "meets_duration_gate": meets_days,
             "meets_trade_count_gate": meets_trades,
             "ready_for_committee_review": ready_for_committee_review,
             "as_of_date": today.isoformat()
         }
+
+    def _get_d21_valid_evaluations_count(self) -> int:
+        """Cuenta las sesiones de evaluación formal de D21 registradas en la persistencia."""
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='task_executions'")
+            if c.fetchone():
+                c.execute(
+                    "SELECT count(DISTINCT execution_date) FROM task_executions "
+                    "WHERE task_id LIKE 'daily_post_close_%' AND status='SUCCESS'"
+                )
+                row = c.fetchone()
+                count = row[0] if row else 0
+                conn.close()
+                return count
+            conn.close()
+        except Exception:
+            pass
+        return 0
 
     def _get_closed_paper_trades_count(self) -> int:
         """Cuenta los trades cerrados persistidos en la base de datos sin fabricar historial."""

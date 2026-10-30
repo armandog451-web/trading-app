@@ -36,6 +36,19 @@ class MarketScheduleService:
         self.is_running = False
         self._loop_task: Optional[asyncio.Task] = None
         self._last_executions: Dict[str, Dict[str, Any]] = {}
+        self.d21_telemetry: Dict[str, Any] = {
+            "d21_last_evaluation_at": None,
+            "d21_last_evaluation_status": "PENDING_SCHEDULE",
+            "d21_last_evaluated_bar": None,
+            "d21_symbols_evaluated": ["SPY", "QQQ", "IWM", "DIA"],
+            "d21_signal_count": 0,
+            "d21_paper_orders_submitted": 0,
+            "d21_evaluation_latency_ms": 0.0,
+            "d21_next_scheduled_evaluation": "2026-10-30T16:15:00-04:00",
+        }
+
+    def get_d21_telemetry(self) -> Dict[str, Any]:
+        return dict(self.d21_telemetry)
 
     def start(self):
         """Inicia el bucle en segundo plano del orquestador si no está activo."""
@@ -366,9 +379,13 @@ class MarketScheduleService:
         )
 
         # Asegurar que el broker activo para la ejecución directa sea Moomoo
+        import time as pytime
+        t0_eval = pytime.perf_counter()
         unified_broker.set_active_broker("moomoo")
         executed_orders = []
         evaluated_symbols = {}
+        signal_count = 0
+        last_evaluated_bar = None
 
         for symbol in ["SPY", "QQQ", "IWM", "DIA"]:
             bars = yfinance_provider.get_historical_bars(symbol, count=80, interval="1d")
@@ -382,6 +399,17 @@ class MarketScheduleService:
 
             if not sig:
                 evaluated_symbols[symbol] = "NO_TRADE"
+                continue
+
+            signal_count += 1
+            last_evaluated_bar = getattr(bars[-1], 'timestamp', None) or (bars[-1].get('date') if isinstance(bars[-1], dict) else None)
+            
+            # Protección de idempotencia contra órdenes duplicadas en la misma fecha
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            existing_orders = unified_broker.get_orders()
+            if any(o.get("symbol") == symbol and str(o.get("created_at", "")).startswith(today_str) for o in existing_orders):
+                logger.info(f"D21 Idempotency: Order for {symbol} already submitted today ({today_str}). Skipping duplicate.")
+                evaluated_symbols[symbol] = "SKIPPED_ALREADY_SUBMITTED_TODAY"
                 continue
 
             # Las 3 condiciones de D21 se han cumplido: validar con RiskEngine (0.25% / $2,500 cap, max 2 posiciones)
@@ -474,11 +502,48 @@ class MarketScheduleService:
             evaluated_symbols[symbol] = f"EXECUTED_MOOMOO ({filled_order.order_id})"
             executed_orders.append(alert_payload)
 
+        elapsed_ms = (time.perf_counter() - t0_eval) * 1000.0
+        now_utc = datetime.now(timezone.utc).isoformat()
+        
+        # Siguiente evaluación a las 16:15 ET del próximo día hábil
+        next_dt = self.calendar.get_now()
+        if next_dt.hour >= 16 and next_dt.minute >= 15:
+            next_eval_str = (next_dt + timedelta(days=1)).strftime("%Y-%m-%d 16:15:00 ET")
+        else:
+            next_eval_str = next_dt.strftime("%Y-%m-%d 16:15:00 ET")
+
+        self.d21_telemetry = {
+            "d21_last_evaluation_at": now_utc,
+            "d21_last_evaluation_status": "SUCCESS",
+            "d21_last_evaluated_bar": last_evaluated_bar or datetime.utcnow().strftime("%Y-%m-%d"),
+            "d21_symbols_evaluated": list(evaluated_symbols.keys()),
+            "d21_signal_count": signal_count,
+            "d21_paper_orders_submitted": len(executed_orders),
+            "d21_evaluation_latency_ms": round(elapsed_ms, 2),
+            "d21_next_scheduled_evaluation": next_eval_str,
+        }
+
+        # Persistir telemetría de evaluación en SQLite
+        try:
+            from database import get_connection
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO settings (key, value)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """, ("d21_last_evaluation_telemetry", json.dumps(self.d21_telemetry)))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
         return {
             "strategy_id": "D21_RangeCompress_5d",
             "broker": "moomoo",
             "evaluated_symbols": evaluated_symbols,
-            "executed_orders": executed_orders
+            "executed_orders": executed_orders,
+            "telemetry": self.d21_telemetry
         }
 
     async def run_daily_report(self, force: bool = True, is_auto: bool = False) -> Dict[str, Any]:
