@@ -1,0 +1,34 @@
+{
+  "activation_event": "ORACLEBOT_FASE7_4_CONTROLLED_ACTIVATION",
+  "governance_mode": "RESEARCH / ANALYSIS_ONLY",
+  "live_trading_enabled": false,
+  "broker_connection": "AIR_GAPPED_NONE",
+  "anchors": {
+    "MR_VolCond_ZScore_V1": {
+      "campaign_id": "CAMP-SHADOW-20261030-MR-VOL-1",
+      "strategy_id": "MR_VolCond_ZScore_V1",
+      "strategy_fingerprint_sha256": "6553286f0805011cc9fda72689145acc7d6f9b5da86ea5a53b44ec06143d599e",
+      "code_sha256": "91841d7d9cc0d845a82ef45e6bd9e97471e27bd83e8310ee0c15571ba2a5bbd3",
+      "parameters_sha256": "98a8af47126ae8ca8d817800602371c0d8f41f729257d93eceaa06a006571367",
+      "activation_approved_utc": "2026-10-30T17:48:08Z",
+      "activation_approved_ny": "2026-10-30T13:48:08-0400",
+      "ledger_entries_count": 1,
+      "ledger_head_hash": "7c5df8cc91b4a73fc6a6867345ac291d5c09cfbbea38b3b8f76837b7b242f680",
+      "first_eligible_session": "2026-11-02",
+      "ledger_integrity_status": "INTEGRIDAD_VERIFICADA (1 entradas enlazadas perfectamente)"
+    },
+    "CS_RelMom_VolAdj_V2": {
+      "campaign_id": "CAMP-SHADOW-20261030-MOM-REL-2",
+      "strategy_id": "CS_RelMom_VolAdj_V2",
+      "strategy_fingerprint_sha256": "6d5c376b1bb345e2430dbae922576e195f3453620390dea79aa8e35abd087550",
+      "code_sha256": "91841d7d9cc0d845a82ef45e6bd9e97471e27bd83e8310ee0c15571ba2a5bbd3",
+      "parameters_sha256": "24055e8f40a1d70a501c8ba1b65d4edc56bb652ff7213e3ab95400f59f40d016",
+      "activation_approved_utc": "2026-10-30T17:48:08Z",
+      "activation_approved_ny": "2026-10-30T13:48:08-0400",
+      "ledger_entries_count": 1,
+      "ledger_head_hash": "db9fa7981ae8454d10bee8eab6f7f67b084e1689e880f06ed6090e2b715de238",
+      "first_eligible_session": "2026-11-02",
+      "ledger_integrity_status": "INTEGRIDAD_VERIFICADA (1 entradas enlazadas perfectamente)"
+    }
+  }
+}
