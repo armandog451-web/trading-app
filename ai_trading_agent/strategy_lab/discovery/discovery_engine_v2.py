@@ -202,17 +202,18 @@ def run_chronological_backtest_asset(
                 in_trade = True
         else:
             holding = i - entry_idx
-            ret_pct = (curr_bar.close - entry_fill) / entry_fill
+            # Evaluacion de salida invariante a costes basada en el precio puro de mercado
+            market_ret_pct = (curr_bar.close - entry_mid) / entry_mid
             exit_needed = False
             reason = ""
 
             if holding >= max_holding:
                 exit_needed = True
                 reason = "TIME_EXIT"
-            elif ret_pct >= profit_target_pct:
+            elif market_ret_pct >= profit_target_pct:
                 exit_needed = True
                 reason = "PROFIT_TARGET"
-            elif ret_pct <= -stop_loss_pct:
+            elif market_ret_pct <= -stop_loss_pct:
                 exit_needed = True
                 reason = "STOP_LOSS"
 
@@ -244,7 +245,8 @@ def run_chronological_backtest_asset(
                     "commission_usd": round(comm_usd, 2),
                     "total_costs_usd": round(slip_usd + comm_usd, 2),
                     "true_net_pnl": round(true_net_pnl, 2),
-                    "return_pct": round(ret_pct * 100.0, 3),
+                    "return_pct": round(((exit_fill - entry_fill) / entry_fill) * 100.0, 3),
+                    "market_return_pct": round(market_ret_pct * 100.0, 3),
                     "exit_reason": reason
                 })
                 in_trade = False
@@ -719,15 +721,32 @@ def run_strategy_discovery_engine_v2() -> Dict[str, Any]:
             status = ResearchStrategyStatus.RESEARCH_REJECTED
             verdict_text = f"RECHAZADA_POR_COMPUERTA_ECONOMICA: {'; '.join(rejection_reasons)}"
 
-        # Ranking Score Explicable
-        # Componentes: OOS PF (40%), OOS Net PnL normalizado (30%), Supervivencia Costes (20%), Consistencia LOSO (10%)
-        pf_score = min(3.0, max(0.0, m_oos_1x["net_profit_factor"])) / 3.0
-        pnl_score = 1.0 if m_oos_1x["sum_true_net_pnl"] > 0 else 0.0
-        cost_survival = 1.0 if m_full_2x["sum_true_net_pnl"] > 0 else (0.5 if m_full_1x["sum_true_net_pnl"] > 0 else 0.0)
-        loso_min_pnl = min([m["sum_true_net_pnl"] for m in loso_map.values()]) if loso_map else 0.0
-        loso_score = 1.0 if loso_min_pnl > 0 else 0.0
+        # Ranking Score Explicable Continuo (Sin saturacion artificial en 1.000)
+        # Componente 1: OOS Profit Factor (30%) - Escala continua [1.0, 4.0]
+        pf_val = m_oos_1x["net_profit_factor"]
+        pf_score = min(1.0, max(0.0, (pf_val - 1.0) / 3.0)) if pf_val > 1.0 else 0.0
 
-        ranking_score = round(pf_score * 0.40 + pnl_score * 0.30 + cost_survival * 0.20 + loso_score * 0.10, 3)
+        # Componente 2: OOS Expectancy relativa al riesgo por trade de $250 (25%)
+        exp_val = m_oos_1x["expectancy_usd"]
+        exp_score = min(1.0, max(0.0, exp_val / 200.0))
+
+        # Componente 3: Retencion de Beneficio ante Costes 2x vs 1x (25%)
+        pnl_1x = m_full_1x["sum_true_net_pnl"]
+        pnl_2x = m_full_2x["sum_true_net_pnl"]
+        cost_retention = min(1.0, max(0.0, pnl_2x / (pnl_1x + 1e-9))) if pnl_1x > 0 else 0.0
+
+        # Componente 4: Consistencia Multiactivo LOSO (20%)
+        loso_vals = [m["sum_true_net_pnl"] for m in loso_map.values()] if loso_map else []
+        pos_loso_count = sum(1 for v in loso_vals if v > 0)
+        loso_score = (pos_loso_count / len(loso_vals)) if loso_vals else 0.0
+
+        ranking_score = round(pf_score * 0.30 + exp_score * 0.25 + cost_retention * 0.25 + loso_score * 0.20, 3)
+        ranking_components = {
+            "oos_profit_factor_score": round(pf_score, 3),
+            "oos_expectancy_score": round(exp_score, 3),
+            "cost_retention_score": round(cost_retention, 3),
+            "loso_breadth_score": round(loso_score, 3)
+        }
 
         exp_record = {
             "hypothesis_id": hyp_id,
@@ -739,6 +758,7 @@ def run_strategy_discovery_engine_v2() -> Dict[str, Any]:
             "status": status.value,
             "verdict_reason": verdict_text,
             "ranking_score": ranking_score,
+            "ranking_components": ranking_components,
             "metrics_1x_full": m_full_1x,
             "metrics_1x_oos": m_oos_1x,
             "metrics_1x_is": strat_results["cost_scenarios"]["1x"]["in_sample"],
@@ -756,15 +776,16 @@ def run_strategy_discovery_engine_v2() -> Dict[str, Any]:
     scratch_dir = repo_root / "ai_trading_agent" / "scratch"
     scratch_dir.mkdir(parents=True, exist_ok=True)
 
-    # Exportar CSV
-    csv_path = scratch_dir / "fase7_3_discovery_trades.csv"
+    # Exportar CSV (fase7_3 y fase7_3a)
     if all_trade_records:
         keys = list(all_trade_records[0].keys())
-        with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=keys)
-            w.writeheader()
-            w.writerows(all_trade_records)
-        print(f"\nTrades CSV exportado: {csv_path} ({len(all_trade_records)} registros)")
+        for c_name in ["fase7_3_discovery_trades.csv", "fase7_3a_discovery_trades.csv"]:
+            c_path = scratch_dir / c_name
+            with open(c_path, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=keys)
+                w.writeheader()
+                w.writerows(all_trade_records)
+            print(f"\nTrades CSV exportado: {c_path} ({len(all_trade_records)} registros)")
 
     # Exportar JSON
     manifest = {
@@ -784,10 +805,14 @@ def run_strategy_discovery_engine_v2() -> Dict[str, Any]:
         "experiments": all_experiments
     }
 
-    json_path = scratch_dir / "fase7_3_discovery_manifest.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
-    print(f"Manifiesto Discovery v2 exportado: {json_path}")
+    for m_name in ["fase7_3_discovery_manifest.json", "fase7_3a_discovery_manifest.json"]:
+        m_path = scratch_dir / m_name
+        manifest_copy = dict(manifest)
+        if "7_3a" in m_name:
+            manifest_copy["phase"] = "FASE_7_3A"
+        with open(m_path, "w", encoding="utf-8") as f:
+            json.dump(manifest_copy, f, indent=2)
+        print(f"Manifiesto Discovery exportado: {m_path}")
 
     return manifest
 
