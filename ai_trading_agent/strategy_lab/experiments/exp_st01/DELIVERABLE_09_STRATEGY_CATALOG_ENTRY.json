@@ -1,0 +1,64 @@
+{
+  "strategy_id": "ST_EMA200_V1",
+  "family": "Trend_Following_SuperTrend",
+  "version": "1.0.0",
+  "classification": "RESEARCH_ONLY",
+  "lead_asset": "GLD",
+  "lead_timeframe": "H1",
+  "baseline_parameters": {
+    "ema_period": 200,
+    "atr_period": 10,
+    "supertrend_multiplier": 3.0,
+    "tp_r_multiple": 1.5,
+    "sl_buffer": 0.0
+  },
+  "performance_metrics": {
+    "total_trades": 75,
+    "win_rate": 50.67,
+    "profit_factor": 1.42,
+    "net_pnl_usd": 4449.16,
+    "sharpe_ratio": 1.2,
+    "max_drawdown_pct": 2.16,
+    "recovery_factor": 2.01
+  },
+  "quantitative_scores": {
+    "economic_edge_score": 43.55,
+    "pure_robustness_score": 90.31,
+    "strategy_quality_score": 69.02,
+    "passed_minimum_gate": true,
+    "gate_failure_reasons": []
+  },
+  "best_hypotheses": [
+    {
+      "id": "H1",
+      "name": "Regime ADX > 25.0",
+      "accepted": false,
+      "delta_pf": -0.06
+    },
+    {
+      "id": "H2",
+      "name": "RVOL > 1.2x SMA20",
+      "accepted": false,
+      "delta_pf": -0.02
+    },
+    {
+      "id": "H3",
+      "name": "ATR Volatility Expansion (ATR > SMA20)",
+      "accepted": false,
+      "delta_pf": 0.06
+    },
+    {
+      "id": "H4",
+      "name": "Session Timing Core (10:00 - 15:00 ET)",
+      "accepted": false,
+      "delta_pf": -0.19
+    },
+    {
+      "id": "H5",
+      "name": "Adaptive SuperTrend Trailing Stop",
+      "accepted": true,
+      "delta_pf": 0.23
+    }
+  ],
+  "recommendation": "APPROVED_FOR_FURTHER_RESEARCH"
+}
