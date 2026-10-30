@@ -13,23 +13,30 @@ Proporciona:
 from .campaign_models import (
     ShadowCampaignStatus,
     CostScenario,
+    ShadowEventType,
     ShadowValidationClock,
     ShadowPosition,
     ShadowLedgerEntry,
     CampaignFreezeManifest
 )
-from .crypto_ledger import ShadowEvidenceLedger
+from .crypto_ledger import ShadowEvidenceLedger, LedgerTamperDetectedError
 from .shadow_simulator import ShadowExecutionSimulator
 from .shadow_evaluator import AutonomousShadowEvaluator
+from .shadow_scheduler import ShadowReportGenerator
+from .freeze_manifests import generate_freeze_manifests
 
 __all__ = [
     "ShadowCampaignStatus",
     "CostScenario",
+    "ShadowEventType",
     "ShadowValidationClock",
     "ShadowPosition",
     "ShadowLedgerEntry",
     "CampaignFreezeManifest",
     "ShadowEvidenceLedger",
+    "LedgerTamperDetectedError",
     "ShadowExecutionSimulator",
-    "AutonomousShadowEvaluator"
+    "AutonomousShadowEvaluator",
+    "ShadowReportGenerator",
+    "generate_freeze_manifests"
 ]
