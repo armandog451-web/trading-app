@@ -1,0 +1,8 @@
+{
+  "asset": "SPY",
+  "cutoff_date": "2026-10-15T00:00:00Z",
+  "original_signals_pre_cutoff": 0,
+  "perturbed_signals_pre_cutoff": 0,
+  "pre_cutoff_signals_identical": true,
+  "causal_integrity_certified": true
+}

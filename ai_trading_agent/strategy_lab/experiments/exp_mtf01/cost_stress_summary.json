@@ -1,0 +1,38 @@
+[
+  {
+    "Cost_Tier": "1x_Base",
+    "Slippage_Bps": 2.0,
+    "Commission_Per_Share": 0.005,
+    "Total_Trades": 7,
+    "Net_PnL": 265.3,
+    "Total_Commissions": 7.53,
+    "Total_Slippage": 55.45,
+    "Total_Friction": 62.98,
+    "Win_Rate": 0.4286,
+    "Expectancy_R": 0.1514
+  },
+  {
+    "Cost_Tier": "2x_Moderate",
+    "Slippage_Bps": 4.0,
+    "Commission_Per_Share": 0.01,
+    "Total_Trades": 7,
+    "Net_PnL": 226.11,
+    "Total_Commissions": 15.06,
+    "Total_Slippage": 110.86,
+    "Total_Friction": 125.92,
+    "Win_Rate": 0.4286,
+    "Expectancy_R": 0.129
+  },
+  {
+    "Cost_Tier": "3x_Severe",
+    "Slippage_Bps": 6.0,
+    "Commission_Per_Share": 0.015,
+    "Total_Trades": 7,
+    "Net_PnL": 186.95,
+    "Total_Commissions": 22.59,
+    "Total_Slippage": 166.28,
+    "Total_Friction": 188.87,
+    "Win_Rate": 0.4286,
+    "Expectancy_R": 0.1067
+  }
+]

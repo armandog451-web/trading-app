@@ -1,0 +1,10 @@
+{
+  "n_resamples": 1000,
+  "sample_size": 7,
+  "mean_simulated_pnl": 274.76,
+  "std_simulated_pnl": 393.57,
+  "p5_pnl": -357.29,
+  "p50_pnl": 261.71,
+  "p95_pnl": 920.87,
+  "prob_positive_pnl": 0.759
+}
