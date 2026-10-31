@@ -29,8 +29,8 @@
       "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
     },
     "data_fingerprint": "4eb1e5cf8deff4348f048cbd92cfd6c0d50f7d9412579064280580278db34be6",
-    "frozen_manifest_hash": "dc9774fd92f65419de4230da4f41f4c3260a8e57978c435b691f4f6003743cce",
-    "frozen_timestamp_utc": "2026-10-31T14:32:31.163272+00:00",
+    "frozen_manifest_hash": "65e9c99372b00ea9efcbf16a42951f94959196b80a08d9079bf78a495a6e20ed",
+    "frozen_timestamp_utc": "2026-10-31T14:33:14.249262+00:00",
     "git_commit": "39cc2cf"
   },
   {
@@ -75,8 +75,8 @@
       "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
     },
     "data_fingerprint": "4eb1e5cf8deff4348f048cbd92cfd6c0d50f7d9412579064280580278db34be6",
-    "frozen_manifest_hash": "81bfa8b7328917b8d232f1ff68a5267ae9ad03c53a9bc16533b0a8a5f52bb69d",
-    "frozen_timestamp_utc": "2026-10-31T14:32:31.163272+00:00",
+    "frozen_manifest_hash": "decc7ed9bb25f474b005dd62f80ac889e54028a4b8ca3a9ce9b2158fdb437f34",
+    "frozen_timestamp_utc": "2026-10-31T14:33:14.249262+00:00",
     "git_commit": "39cc2cf"
   },
   {
@@ -109,8 +109,8 @@
       "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
     },
     "data_fingerprint": "23ad94887cefd632581a0f42d23e4d6278c9c1882a35a757ee31f0748a9bf8a6",
-    "frozen_manifest_hash": "e4c52e77163919837d7c6966abfef5ce1d0f50eeaec1316e8e9822aeab38654d",
-    "frozen_timestamp_utc": "2026-10-31T14:32:31.163272+00:00",
+    "frozen_manifest_hash": "2a5c91693b9beb5e869b002e4be8197c91f3b2027e085786ff848741a38c3767",
+    "frozen_timestamp_utc": "2026-10-31T14:33:14.249262+00:00",
     "git_commit": "39cc2cf"
   },
   {
@@ -155,8 +155,8 @@
       "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
     },
     "data_fingerprint": "23ad94887cefd632581a0f42d23e4d6278c9c1882a35a757ee31f0748a9bf8a6",
-    "frozen_manifest_hash": "761a7c41db8e572861c84ff0074fc5d028daea3e3ba008c1a37632aee4b4ce25",
-    "frozen_timestamp_utc": "2026-10-31T14:32:31.163272+00:00",
+    "frozen_manifest_hash": "c1c59fa46c1fe45ecf27598fe0aef6634a2c07535e92b8237b36651cb823edb9",
+    "frozen_timestamp_utc": "2026-10-31T14:33:14.249262+00:00",
     "git_commit": "39cc2cf"
   }
 ]
