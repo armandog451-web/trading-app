@@ -177,18 +177,19 @@ class ShadowCampaignManagerST02:
         idemp_pass = True
         try:
             test_ledger = self.ledgers["ST02-GLD-BASE"]
-            # Añadir evento test
-            test_ev = test_ledger.append_event(
+            test_id = f"TEST-IDEMP-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
+            # Añadir evento test con ID único
+            test_ledger.append_event(
                 event_type=ShadowEventTypeST02.HEARTBEAT,
                 payload={"test": "idempotency_check"},
-                custom_entry_id="TEST-IDEMP-001",
+                custom_entry_id=test_id,
             )
-            # Reintentar añadir con el mismo ID -> debe lanzar excepción
+            # Reintentar añadir con exactamente el mismo ID -> debe lanzar excepción
             try:
                 test_ledger.append_event(
                     event_type=ShadowEventTypeST02.HEARTBEAT,
                     payload={"test": "idempotency_check_duplicate"},
-                    custom_entry_id="TEST-IDEMP-001",
+                    custom_entry_id=test_id,
                 )
                 idemp_pass = False
             except ValueError:
