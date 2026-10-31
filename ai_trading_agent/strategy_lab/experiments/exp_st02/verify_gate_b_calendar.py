@@ -25,13 +25,13 @@ def verify_gate_b():
     dt_target = datetime(2026, 11, 2, 9, 30, tzinfo=ny_tz)
 
     is_weekend = dt_target.weekday() >= 5
-    is_holiday = market_calendar.is_holiday(dt_target)
-    is_early_close = market_calendar.is_early_close(dt_target)
+    is_holiday, holiday_reason = market_calendar.is_holiday(dt_target)
+    is_early_close, early_reason = market_calendar.is_early_close(dt_target)
 
     print(f"1. Fecha Objetivo: {target_date.strftime('%Y-%m-%d')} ({dt_target.strftime('%A')})")
     print(f"   - Es Fin de Semana: {is_weekend}")
-    print(f"   - Es Festivo NYSE: {is_holiday}")
-    print(f"   - Es Cierre Anticipado: {is_early_close}")
+    print(f"   - Es Festivo NYSE: {is_holiday} ({holiday_reason})")
+    print(f"   - Es Cierre Anticipado: {is_early_close} ({early_reason})")
 
     # 2. Verificación de Cambio de Hora (DST Fall Back)
     # Domingo 1 de Noviembre de 2026 termina DST en EE.UU.
