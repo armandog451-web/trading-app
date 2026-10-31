@@ -1,0 +1,66 @@
+{
+  "campaign_id": "CAMP-SHADOW-EXP-ST02-2026",
+  "version": "1.1.0",
+  "created_at_utc": "2026-10-31T14:40:49.352265+00:00",
+  "t0_activation_utc": "2026-10-31T14:42:36.904647+00:00",
+  "first_eligible_session": "2026-11-02",
+  "current_state": "AUTHORIZATION_GRANTED_PENDING_START",
+  "activation_authorized": true,
+  "target_sessions": 90,
+  "completed_sessions": 0,
+  "portfolios": {
+    "ST02-GLD-BASE": {
+      "symbol": "GLD",
+      "timeframe": "H1",
+      "capital": 100000.0,
+      "risk_trade": 250.0,
+      "variant": "BASELINE_TP_1_5R"
+    },
+    "ST02-GLD-H5": {
+      "symbol": "GLD",
+      "timeframe": "H1",
+      "capital": 100000.0,
+      "risk_trade": 250.0,
+      "variant": "H5_ADAPTIVE_TRAILING"
+    },
+    "ST02-DIA-BASE": {
+      "symbol": "DIA",
+      "timeframe": "H1",
+      "capital": 100000.0,
+      "risk_trade": 250.0,
+      "variant": "BASELINE_TP_1_5R"
+    },
+    "ST02-DIA-H5": {
+      "symbol": "DIA",
+      "timeframe": "H1",
+      "capital": 100000.0,
+      "risk_trade": 250.0,
+      "variant": "H5_ADAPTIVE_TRAILING"
+    }
+  },
+  "gates": {
+    "gate_20": {
+      "sessions": 20,
+      "focus": "OPERATIONAL_INTEGRITY_NO_BROKER_LEAKS"
+    },
+    "gate_60": {
+      "sessions": 60,
+      "focus": "INTERMEDIATE_STATISTICAL_DISTRIBUTION"
+    },
+    "gate_90": {
+      "sessions": 90,
+      "focus": "FORMAL_PROSPECTIVE_DECISION"
+    }
+  },
+  "isolation_fingerprints": {
+    "d21_expected_fingerprint": "f885ec2db2422308",
+    "d21_verified": true,
+    "shadow_mr_campaign_intact": true,
+    "shadow_mom_campaign_intact": true,
+    "live_trading_physically_blocked": true,
+    "broker_orders_count": 0,
+    "t0_activation_timestamp_utc": "2026-10-31T14:42:36.904647+00:00",
+    "first_eligible_bar_close_utc": "2026-11-02T15:30:00Z"
+  },
+  "manifest_sha256": "e100f99f1c706763a0106ab150c9633bf7454f1d263d35c510966f4f1ca3795d"
+}
