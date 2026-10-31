@@ -1,7 +1,7 @@
 # ENTREGABLE 05 — VALIDACIÓN INDEPENDIENTE DE LA VARIANTE H5
 ## SuperTrend Trailing Stop vs Baseline Take Profit 1.5R
 
-**Fecha:** 2026-10-31 10:34:23 UTC  
+**Fecha:** 2026-10-31 10:34:47 UTC  
 **Estado:** `H5_PROSPECTIVE_PENDING`  
 **Sesgo de Selección:** `HISTORICAL_HOLDOUT_NOT_INDEPENDENT`  
 
