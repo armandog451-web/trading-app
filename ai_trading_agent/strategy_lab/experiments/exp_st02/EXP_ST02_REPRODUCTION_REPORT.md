@@ -1,7 +1,7 @@
 # ENTREGABLE 02 — REPORTE DE REPRODUCCIÓN INDEPENDIENTE
 ## Estrategia: `ST_EMA200_V1` | Activos Líderes: GLD_H1 y DIA_H1
 
-**Fecha de Ejecución:** 2026-10-31 10:28:56 UTC  
+**Fecha de Ejecución:** 2026-10-31 10:32:00 UTC  
 **Metodología:** Re-ejecución con motor independiente, re-cálculo de indicadores y verificación trade-by-trade.
 
 ---
