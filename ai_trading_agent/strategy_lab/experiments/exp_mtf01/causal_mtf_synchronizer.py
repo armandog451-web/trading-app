@@ -74,6 +74,13 @@ class CausalMTFSynchronizer:
         h1_feat.index = pd.to_datetime(h1_feat.index)
         m5_feat.index = pd.to_datetime(m5_feat.index)
 
+        if d1_feat.index.tz is None:
+            d1_feat.index = d1_feat.index.tz_localize('UTC')
+        if h1_feat.index.tz is None:
+            h1_feat.index = h1_feat.index.tz_localize('UTC')
+        if m5_feat.index.tz is None:
+            m5_feat.index = m5_feat.index.tz_localize('UTC')
+
         # Mapeo rápido de H1 por timestamp
         h1_times = h1_feat.index.values
 
