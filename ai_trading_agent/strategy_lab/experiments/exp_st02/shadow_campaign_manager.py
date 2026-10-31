@@ -173,20 +173,22 @@ class ShadowCampaignManagerST02:
             ledger_statuses[cid] = {"valid": valid, "violations": violations}
         checks["ledgers_integrity"] = ledger_statuses
 
-        # 5. Prueba de Idempotencia
+        # 5. Prueba de Idempotencia en Ledger Aislado Temporal
         idemp_pass = True
         try:
-            test_ledger = self.ledgers["ST02-GLD-BASE"]
-            test_id = f"TEST-IDEMP-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-            # Añadir evento test con ID único
-            test_ledger.append_event(
+            temp_ledger_path = self.ledgers_dir / "_temp_idemp_check.jsonl"
+            if temp_ledger_path.exists():
+                temp_ledger_path.unlink()
+            temp_ledger = ShadowLedgerST02("TEST-CAMP", "TEST-CAND", temp_ledger_path)
+            test_id = "TEST-IDEMP-CHECK-001"
+            temp_ledger.append_event(
                 event_type=ShadowEventTypeST02.HEARTBEAT,
                 payload={"test": "idempotency_check"},
                 custom_entry_id=test_id,
             )
             # Reintentar añadir con exactamente el mismo ID -> debe lanzar excepción
             try:
-                test_ledger.append_event(
+                temp_ledger.append_event(
                     event_type=ShadowEventTypeST02.HEARTBEAT,
                     payload={"test": "idempotency_check_duplicate"},
                     custom_entry_id=test_id,
@@ -194,7 +196,10 @@ class ShadowCampaignManagerST02:
                 idemp_pass = False
             except ValueError:
                 idemp_pass = True
-        except Exception as e:
+            finally:
+                if temp_ledger_path.exists():
+                    temp_ledger_path.unlink()
+        except Exception:
             idemp_pass = False
 
         checks["idempotency_guard"] = {"status": "VERIFIED" if idemp_pass else "FAILED"}
