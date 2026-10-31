@@ -1,11 +1,11 @@
 {
   "campaign_id": "CAMP-SHADOW-EXP-ST02-2026",
-  "version": "1.1.0",
-  "created_at_utc": "2026-10-31T14:43:05.895147+00:00",
-  "t0_activation_utc": "2026-10-31T14:48:06.346998+00:00",
-  "first_eligible_session": "2026-11-02",
-  "current_state": "AUTHORIZATION_GRANTED_PENDING_START",
-  "activation_authorized": true,
+  "version": "1.0.0",
+  "created_at_utc": "2026-10-31T14:48:42.284014+00:00",
+  "t0_activation_utc": "NOT_ACTIVATED_AWAITING_AUTH",
+  "first_eligible_session": null,
+  "current_state": "AUTHORIZATION_REQUIRED",
+  "activation_authorized": false,
   "target_sessions": 90,
   "completed_sessions": 0,
   "portfolios": {
@@ -58,9 +58,7 @@
     "shadow_mr_campaign_intact": true,
     "shadow_mom_campaign_intact": true,
     "live_trading_physically_blocked": true,
-    "broker_orders_count": 0,
-    "t0_activation_timestamp_utc": "2026-10-31T14:48:06.346998+00:00",
-    "first_eligible_bar_close_utc": "2026-11-02T15:30:00Z"
+    "broker_orders_count": 0
   },
-  "manifest_sha256": "5f345fc7626228853165392e08a94a28f4d1cae4c81d9181b859d72c3f1b86a5"
+  "manifest_sha256": "6451ab6ff4841476ec146c5fb4848a5658f32833bd8dd11505a7c47c3c721232"
 }
