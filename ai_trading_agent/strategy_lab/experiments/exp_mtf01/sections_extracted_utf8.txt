@@ -1,0 +1,1525 @@
+=== # 5. ETAPA A — FORMALIZACIÓN CIENTÍFICA ===
+# 5. ETAPA A — FORMALIZACIÓN CIENTÍFICA
+
+
+
+Esta etapa tiene prioridad absoluta.
+
+
+
+No empezar la campaña principal de backtesting hasta completar y aprobar la especificación.
+
+
+
+## 5.1 D1 — Definición matemática de extremos
+
+
+
+Proponer una primera versión basada en máximos y mínimos observables retrospectivamente.
+
+
+
+Parámetros iniciales de investigación:
+
+
+
+`EXTREME_LOOKBACK = 60` sesiones.
+
+
+
+`EXTREME_ATR_TOLERANCE = 0.50`.
+
+
+
+Una zona de extremo inferior candidata podrá identificarse cuando el cierre diario esté a una distancia máxima de 0,50 ATR de un mínimo relevante de las 60 sesiones anteriores.
+
+
+
+Aplicar la regla simétrica para extremos superiores.
+
+
+
+El rango de búsqueda deberá utilizar exclusivamente información disponible hasta la última vela diaria cerrada.
+
+
+
+No detectar soportes mediante pivotes futuros.
+
+
+
+No etiquetar como válida una zona únicamente porque posteriormente el precio rebotó.
+
+
+
+Documentar una alternativa basada en pivotes históricos confirmados, para comparación controlada.
+
+
+
+**Estos valores son supuestos nuevos de investigación, no parámetros extraídos del video.**
+
+
+
+## 5.2 D1 — Aceleración hacia el extremo
+
+
+
+Investigar una definición inicial que combine:
+
+
+
+- Desplazamiento normalizado por ATR.
+
+- Rendimiento de las últimas N velas.
+
+- Persistencia direccional.
+
+- Relación cuerpo/rango de las velas.
+
+
+
+Propuesta inicial:
+
+
+
+`ACCEL_LOOKBACK = 5`
+
+
+
+Un movimiento deberá presentar desplazamiento neto significativo respecto a su ATR histórico.
+
+
+
+El umbral exacto debe quedar especificado antes de evaluar su rentabilidad.
+
+
+
+Evitar condiciones que seleccionen únicamente los movimientos extremos que terminaron revirtiendo.
+
+
+
+## 5.3 D1 — Desaceleración
+
+
+
+La desaceleración deberá definirse mediante variables observables.
+
+
+
+Evaluar una formulación inicial:
+
+
+
+- Contracción de cuerpos reales.
+
+- Reducción del avance neto diario.
+
+- Menor eficiencia direccional.
+
+- Incremento de sombras de rechazo.
+
+- Pérdida de persistencia del movimiento anterior.
+
+
+
+No utilizar todos los indicadores simultáneamente por defecto.
+
+
+
+Seleccionar una definición mínima, interpretable y causal mediante un protocolo previamente documentado.
+
+
+
+La desaceleración será una condición de observación, no una garantía de giro.
+
+
+
+## 5.4 H1 — Identificación de estructura
+
+
+
+Formalizar:
+
+
+
+- Swing High.
+
+- Swing Low.
+
+- Higher High.
+
+- Higher Low.
+
+- Lower High.
+
+- Lower Low.
+
+- Break of Structure (BOS).
+
+
+
+Propuesta inicial de investigación:
+
+
+
+`SWING_LEFT = 3`
+
+
+
+`SWING_RIGHT = 3`
+
+
+
+Un pivot solo podrá considerarse confirmado después de transcurrir las tres barras de la derecha.
+
+
+
+**La fecha de confirmación no equivale a la fecha visual del pivot.**
+
+
+
+El motor debe impedir que un pivot confirmado retrospectivamente genere una señal sobre barras anteriores.
+
+
+
+## 5.5 H1 — Confirmación de giro
+
+
+
+### Long
+
+
+
+1. Contexto diario de extremo inferior válido.
+
+2. Desaceleración diaria confirmada.
+
+3. Estructura H1 bajista previa.
+
+4. Ruptura confirmada de un máximo estructural relevante.
+
+5. Formación de impulso alcista causalmente identificado.
+
+6. Espera de retroceso.
+
+
+
+### Short
+
+
+
+Aplicar hipótesis simétrica:
+
+
+
+1. Extremo superior.
+
+2. Desaceleración.
+
+3. Estructura alcista previa.
+
+4. Ruptura bajista.
+
+5. Impulso bajista.
+
+6. Espera de retroceso.
+
+
+
+No clasificar como BOS una ruptura no confirmada por las reglas congeladas.
+
+
+
+## 5.6 H1 — EMA 50 y Fibonacci
+
+
+
+Parámetros:
+
+
+
+`EMA_PERIOD = 50`
+
+
+
+`FIB_RETRACEMENT = 0.618`
+
+
+
+`FIB_STOP_REFERENCE = 0.75`
+
+
+
+El Fibonacci debe calcularse sobre extremos del impulso que ya sean conocidos y confirmados.
+
+
+
+La zona operativa se define alrededor del retroceso 0,618 y EMA 50.
+
+
+
+Propuesta inicial:
+
+
+
+`CONFLUENCE_TOLERANCE = 0.25 ATR_H1`
+
+
+
+Esta tolerancia es experimental.
+
+
+
+Para Long:
+
+
+
+- Buscar retroceso hacia 0,618.
+
+- Confirmar proximidad de EMA 50.
+
+- Exigir estructura compatible con un posible mínimo creciente.
+
+
+
+Para Short:
+
+
+
+- Aplicar la condición simétrica sobre un retroceso alcista dentro de la nueva estructura bajista.
+
+
+
+No desplazar retrospectivamente el origen o el extremo del Fibonacci para mejorar resultados.
+
+
+
+Registrar las coordenadas utilizadas en cada señal.
+
+
+
+## 5.7 M5 — Entrada de precisión
+
+
+
+Una vez activado el setup H1:
+
+
+
+1. Identificar estructura correctiva M5.
+
+2. Detectar ruptura local confirmada.
+
+3. Verificar que el setup D1/H1 continúa vigente.
+
+4. Generar señal al cierre de la vela M5.
+
+5. Simular entrada en el primer momento ejecutable posterior a la confirmación.
+
+
+
+Definir matemáticamente la ruptura estructural.
+
+
+
+No utilizar rupturas de diagonales dibujadas manualmente que no tengan un algoritmo reproducible.
+
+
+
+Incluir timeout del setup y condiciones de invalidación.
+
+
+
+Si el precio abandona la zona antes de confirmar la entrada, registrar `NO_TRADE`.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 6. STOP LOSS Y TAKE PROFIT ===
+# 6. STOP LOSS Y TAKE PROFIT
+
+
+
+## 6.1 Stop Loss
+
+
+
+La estrategia descrita utiliza una zona de protección vinculada con Fibonacci 0,75 en su ejemplo alcista.
+
+
+
+Para el baseline experimental:
+
+
+
+- Long: stop bajo el nivel 0,75 del retroceso.
+
+- Short: stop sobre el nivel simétrico.
+
+- Aplicar buffer pequeño, definido mediante ATR o ticks.
+
+- Rechazar operaciones con distancia de stop inválida.
+
+- Registrar riesgo inicial en unidades R.
+
+
+
+El nivel debe quedar calculado antes de enviar la orden interna simulada.
+
+
+
+## 6.2 Take Profit
+
+
+
+El video utiliza objetivos cercanos basados en la estructura del precio, pero no aporta una fórmula universal.
+
+
+
+Proponer dos variantes separadas:
+
+
+
+**MTF_V1A — Structure Target**
+
+
+
+Objetivo en resistencia o soporte relevante conocido antes de la entrada.
+
+
+
+**MTF_V1B — Fixed R Target**
+
+
+
+Objetivo fijo basado en el riesgo inicial, usando un R múltiplo predefinido para el experimento.
+
+
+
+No asumir que el autor utiliza siempre una relación beneficio/riesgo constante.
+
+
+
+Un objetivo pequeño puede aumentar el Win Rate, pero exige mayor tasa de acierto para compensar pérdidas y costos.
+
+
+
+## 6.3 Modelo de riesgo
+
+
+
+Capital inicial de referencia:
+
+
+
+`INITIAL_EQUITY = 100000`
+
+
+
+Riesgo inicial máximo propuesto:
+
+
+
+`RISK_PER_TRADE = 0.25%`
+
+
+
+Máximo una posición por instrumento dentro de una misma configuración.
+
+
+
+Este capital es ficticio y exclusivo del laboratorio.
+
+
+
+No vincularlo a las cuentas Paper existentes.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 7. ETAPA B — DISEÑO MODULAR ===
+# 7. ETAPA B — DISEÑO MODULAR
+
+
+
+Integrar la nueva estrategia utilizando las interfaces existentes.
+
+
+
+Estructura conceptual propuesta:
+
+
+
+```text
+
+strategy_lab/
+
+└── experiments/
+
+    └── exp_mtf01/
+
+        ├── specification/
+
+        ├── data/
+
+        ├── indicators/
+
+        ├── structure/
+
+        ├── signals/
+
+        ├── execution_simulation/
+
+        ├── validation/
+
+        ├── reports/
+
+        └── manifests/
+
+```
+
+
+
+No imponer estas carpetas si el repositorio ya posee una convención diferente.
+
+
+
+## Componentes lógicos
+
+
+
+**DailyContextEngine**
+
+
+
+Calcula extremos, aceleración y desaceleración.
+
+
+
+**MarketStructureEngine**
+
+
+
+Detecta pivotes confirmados, rupturas y cambios de estructura.
+
+
+
+**FibonacciConfluenceEngine**
+
+
+
+Calcula retrocesos sobre impulsos confirmados y proximidad a EMA 50.
+
+
+
+**M5EntryEngine**
+
+
+
+Gestiona confirmación y expiración de setups.
+
+
+
+**CausalMultiTimeframeSynchronizer**
+
+
+
+Garantiza que D1, H1 y M5 se sincronizan según la disponibilidad real de sus barras.
+
+
+
+**ResearchExecutionSimulator**
+
+
+
+Simula fills, stops, targets, gaps y costos, sin conectar brokers.
+
+
+
+**ResearchEvaluationAdapter**
+
+
+
+Integra scoring, robustez y reportes con los motores existentes.
+
+
+
+No duplicar componentes ya validados sin justificación técnica.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 8. SINCRONIZACIÓN D1 / H1 / M5 ===
+# 8. SINCRONIZACIÓN D1 / H1 / M5
+
+
+
+Este es uno de los riesgos técnicos más importantes del experimento.
+
+
+
+Para una decisión M5 en un instante dado:
+
+
+
+- El contexto D1 debe corresponder a la última barra diaria efectivamente cerrada y disponible.
+
+- La estructura H1 debe incorporar únicamente velas H1 cerradas y publicadas.
+
+- La señal M5 se evalúa después del cierre de su vela.
+
+- La orden simulada no puede ejecutarse antes de existir la señal.
+
+
+
+No utilizar el High, Low o Close final de una vela diaria todavía abierta.
+
+
+
+No utilizar el cierre H1 a las 11:30 para una decisión M5 realizada a las 11:05.
+
+
+
+La sincronización debe basarse en timestamps UTC y disponibilidad causal, no únicamente en etiquetas de barras.
+
+
+
+Implementar pruebas con retrasos artificiales de publicación.
+
+
+
+El calendario debe manejar:
+
+
+
+- Sesión regular.
+
+- Premarket cuando corresponda, manteniéndolo separado.
+
+- Festivos.
+
+- Cierres anticipados.
+
+- Horario de verano.
+
+- Barras incompletas.
+
+- Eventos corporativos.
+
+- Diferencias de horarios entre mercados.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 9. ETAPA C — DISEÑO DEL BACKTEST INDEPENDIENTE ===
+# 9. ETAPA C — DISEÑO DEL BACKTEST INDEPENDIENTE
+
+
+
+No utilizar los resultados del video como benchmark validado.
+
+
+
+El autor mostró una operación ilustrativa y declaraciones de resultados personales, pero no proporcionó un historial integral de operaciones que permita verificar estadísticamente esta metodología.
+
+
+
+## 9.1 Universo inicial
+
+
+
+Propuesta de activos estadounidenses líquidos:
+
+
+
+- SPY.
+
+- QQQ.
+
+- DIA.
+
+- IWM.
+
+- GLD.
+
+- TLT.
+
+
+
+Estos seis activos ofrecen distintos comportamientos de volatilidad y estructura de mercado.
+
+
+
+No asumir que el método funcionará mejor en ninguno de ellos.
+
+
+
+## 9.2 Temporalidades
+
+
+
+La estrategia utiliza conjuntamente:
+
+
+
+`D1 + H1 + M5`
+
+
+
+No son tres backtests independientes.
+
+
+
+Cada backtest deberá reproducir la jerarquía completa de las tres temporalidades.
+
+
+
+## 9.3 Datos históricos
+
+
+
+Utilizar OHLCV reales y ajustados coherentemente.
+
+
+
+El requisito de M5 puede limitar mucho la profundidad histórica accesible.
+
+
+
+Antigravity debe inspeccionar primero las fuentes disponibles.
+
+
+
+No utilizar datos sintéticos como sustitutos de históricos reales para emitir veredictos económicos.
+
+
+
+No presentar como equivalentes backtests de varios años y pruebas limitadas a unas pocas semanas.
+
+
+
+Si no existe suficiente profundidad M5:
+
+
+
+- Documentar la cobertura exacta.
+
+- Evaluar alternativas de datos históricos compatibles.
+
+- Declarar las limitaciones.
+
+- Evitar inventar o reconstruir barras no disponibles.
+
+
+
+No contratar servicios ni realizar compras de datos sin autorización.
+
+
+
+## 9.4 Campaña baseline
+
+
+
+Ejecutar inicialmente seis backtests principales:
+
+
+
+- SPY D1/H1/M5.
+
+- QQQ D1/H1/M5.
+
+- DIA D1/H1/M5.
+
+- IWM D1/H1/M5.
+
+- GLD D1/H1/M5.
+
+- TLT D1/H1/M5.
+
+
+
+Cada configuración deberá producir un ledger individual.
+
+
+
+Las variantes de salida deberán distinguirse del baseline y reportarse por separado.
+
+
+
+No seleccionar el instrumento ganador antes de congelar las condiciones del análisis.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 10. BASELINES Y PRUEBAS DE ABLACIÓN ===
+# 10. BASELINES Y PRUEBAS DE ABLACIÓN
+
+
+
+Para comprobar qué elementos aportan valor, crear comparaciones controladas.
+
+
+
+**Baseline A — Método completo**
+
+
+
+D1 extremos + desaceleración + H1 BOS + EMA 50/Fibonacci + M5 ruptura.
+
+
+
+**Ablación B — Sin contexto D1**
+
+
+
+Mantener H1 y M5, eliminando el filtro diario.
+
+
+
+**Ablación C — Sin confluencia Fibonacci**
+
+
+
+Mantener el resto de los componentes y comprobar la aportación del retroceso 0,618.
+
+
+
+**Ablación D — Sin filtro EMA 50**
+
+
+
+Medir el efecto de retirar la media exponencial.
+
+
+
+**Ablación E — Entrada H1 sin confirmación M5**
+
+
+
+Comparar la mejora o deterioro de emplear confirmación intradía.
+
+
+
+El objetivo es distinguir una ventaja estructural de una estrategia excesivamente compleja que únicamente reduce el número de operaciones.
+
+
+
+Predefinir las comparaciones antes de observar los resultados.
+
+
+
+Controlar el riesgo de selección múltiple.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 11. ETAPA D — VALIDACIÓN DE ROBUSTEZ ===
+# 11. ETAPA D — VALIDACIÓN DE ROBUSTEZ
+
+
+
+La estrategia solo podrá avanzar después de una validación científica rigurosa.
+
+
+
+## 11.1 Separación cronológica
+
+
+
+Dividir los datos disponibles, si son suficientes, en:
+
+
+
+- Desarrollo.
+
+- Validación.
+
+- Test fuera de muestra.
+
+
+
+Como referencia:
+
+
+
+60% / 20% / 20%.
+
+
+
+No utilizar particiones aleatorias que mezclen información futura.
+
+
+
+Si los datos son insuficientes, declarar explícitamente que el test no tiene potencia suficiente.
+
+
+
+## 11.2 Walk-forward
+
+
+
+Evaluar:
+
+
+
+- Estabilidad temporal.
+
+- Rendimiento fuera de muestra.
+
+- Sensibilidad a condiciones de mercado.
+
+- Número de operaciones por ventana.
+
+- Degradación económica entre ventanas.
+
+
+
+No optimizar parámetros usando períodos reservados para evaluación.
+
+
+
+## 11.3 Monte Carlo
+
+
+
+Realizar simulaciones de incertidumbre, preferentemente con remuestreo por bloques cuando exista dependencia temporal.
+
+
+
+Reportar:
+
+
+
+- Intervalos de PnL.
+
+- Distribución de expectancy.
+
+- Drawdown.
+
+- Riesgo de secuencias de pérdidas.
+
+- Sensibilidad a operaciones extremas.
+
+
+
+No presentar probabilidades bootstrap como probabilidades garantizadas de rentabilidad futura.
+
+
+
+## 11.4 Stress de costos
+
+
+
+Evaluar:
+
+
+
+- Comisiones.
+
+- Spread.
+
+- Slippage base.
+
+- Slippage moderado.
+
+- Slippage severo.
+
+- Latencia.
+
+- Gaps.
+
+- Liquidez intradía.
+
+
+
+Como la entrada ocurre en M5, la simulación debe ser especialmente exigente con los costos y la posibilidad de fills no ejecutables.
+
+
+
+No atribuir automáticamente una ejecución al precio Open de la siguiente vela si la señal todavía no estaba disponible.
+
+
+
+## 11.5 Sensibilidad de parámetros
+
+
+
+Investigar la estabilidad alrededor de los parámetros congelados, sin buscar únicamente el máximo rendimiento.
+
+
+
+Los valores a estudiar deberán quedar predefinidos y sujetos a un presupuesto limitado de experimentos.
+
+
+
+Registrar todas las configuraciones evaluadas, incluidas las perdedoras.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 12. SCORING INSTITUCIONAL ===
+# 12. SCORING INSTITUCIONAL
+
+
+
+Reutilizar las implementaciones vigentes de:
+
+
+
+- Economic Edge Score (EES).
+
+- Pure Robustness Score (PRS).
+
+- Strategy Quality Score (SQS).
+
+- Minimum Evidence Gate.
+
+
+
+No alterar sus fórmulas ni umbrales.
+
+
+
+Cada resultado deberá incluir:
+
+
+
+- Número de trades.
+
+- Win Rate.
+
+- Profit Factor.
+
+- Expectancy en R.
+
+- PnL bruto y neto.
+
+- Maximum Drawdown.
+
+- Recovery Factor.
+
+- Exposición temporal.
+
+- Average Win / Average Loss.
+
+- Costos.
+
+- Sensibilidad a costos.
+
+- Resultados fuera de muestra.
+
+- Incertidumbre estadística.
+
+
+
+Si no existen operaciones suficientes, clasificar:
+
+
+
+`INSUFFICIENT_EVIDENCE`.
+
+
+
+No aprobar estrategias únicamente por tener un Profit Factor superior a 1.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 13. PRUEBAS ANTI-LEAKAGE ===
+# 13. PRUEBAS ANTI-LEAKAGE
+
+
+
+Implementar pruebas automatizadas que cubran:
+
+
+
+1. Pivotes confirmados sin acceso al futuro.
+
+2. Contexto diario exclusivamente con cierres disponibles.
+
+3. Confirmación horaria sin velas incompletas.
+
+4. Fibonacci construido a partir de extremos conocidos.
+
+5. EMA 50 causal.
+
+6. Rupturas M5 confirmadas.
+
+7. Entradas posteriores a la señal.
+
+8. Resolución conservadora de Stop/Target intrabarra.
+
+9. Tratamiento de gaps.
+
+10. Ausencia de operaciones duplicadas.
+
+11. Determinismo.
+
+12. Perturbación de datos futuros.
+
+13. Validación de timestamps.
+
+14. Separación de datasets.
+
+15. Integridad de cálculos de PnL.
+
+
+
+### Prueba de perturbación futura
+
+
+
+Alterar precios posteriores a una fecha de corte.
+
+
+
+Confirmar que:
+
+
+
+- Señales anteriores no cambian.
+
+- Niveles previos no cambian.
+
+- Decisiones anteriores no cambian.
+
+- Ejecuciones anteriores no cambian.
+
+
+
+La prueba deberá repetirse sobre D1, H1 y M5.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 14. ESTADOS Y PUERTAS DE INVESTIGACIÓN ===
+# 14. ESTADOS Y PUERTAS DE INVESTIGACIÓN
+
+
+
+Implementar la siguiente máquina de estados:
+
+
+
+```text
+
+SPECIFICATION_PENDING
+
+        |
+
+        v
+
+SCIENTIFIC_FORMALIZATION
+
+        |
+
+        +--- SPECIFICATION_FAIL
+
+        |          |
+
+        |          v
+
+        |       BLOCKED
+
+        |
+
+        v
+
+SPECIFICATION_FROZEN
+
+        |
+
+        v
+
+DATA_COVERAGE_AUDIT
+
+        |
+
+        +--- INSUFFICIENT_DATA
+
+        |          |
+
+        |          v
+
+        |      INCONCLUSIVE
+
+        |
+
+        v
+
+BASELINE_BACKTEST
+
+        |
+
+        v
+
+ANTI_LEAKAGE_VALIDATION
+
+        |
+
+        v
+
+ROBUSTNESS_VALIDATION
+
+        |
+
+        v
+
+ECONOMIC_SCORING
+
+        |
+
+        v
+
+FINAL_RESEARCH_VERDICT
+
+        |
+
+        +--- REJECTED
+
+        |
+
+        +--- INCONCLUSIVE
+
+        |
+
+        +--- RESEARCH_CONTINUE
+
+        |
+
+        +--- ELIGIBLE_FOR_MANUAL_REVIEW
+
+```
+
+
+
+No incluir transiciones automáticas a PAPER o LIVE.
+
+
+
+Tampoco incluir una transición automática a Forward Shadow.
+
+
+
+Cualquier nueva campaña prospectiva requerirá autorización explícita posterior del usuario.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 15. ENTREGABLES OBLIGATORIOS ===
+# 15. ENTREGABLES OBLIGATORIOS
+
+
+
+Crear los siguientes informes y artefactos:
+
+
+
+| ID | Archivo | Contenido |
+
+|---|---|---|
+
+| 01 | `EXP_MTF01_SCIENTIFIC_SPECIFICATION.md` | Formalización completa de reglas |
+
+| 02 | `EXP_MTF01_PARAMETER_MANIFEST.json` | Parámetros, versiones y hashes |
+
+| 03 | `EXP_MTF01_DATA_COVERAGE_AUDIT.md` | Cobertura D1/H1/M5 |
+
+| 04 | `EXP_MTF01_IMPLEMENTATION_REPORT.md` | Arquitectura y módulos |
+
+| 05 | `EXP_MTF01_BASELINE_RESULTS.csv` | Backtests iniciales |
+
+| 06 | `EXP_MTF01_ABLATION_STUDY.md` | Contribución de cada componente |
+
+| 07 | `EXP_MTF01_ROBUSTNESS_REPORT.md` | OOS, walk-forward, Monte Carlo |
+
+| 08 | `EXP_MTF01_COST_STRESS_REPORT.md` | Fricción de mercado |
+
+| 09 | `EXP_MTF01_ANTI_LEAKAGE_AUDIT.md` | Certificación causal |
+
+| 10 | `EXP_MTF01_ISOLATION_AUDIT.md` | Protección institucional |
+
+| 11 | `EXP_MTF01_TEST_REPORT.md` | Suite automatizada |
+
+| 12 | `EXP_MTF01_FINAL_RESEARCH_VERDICT.md` | Conclusión cuantitativa |
+
+
+
+Los entregables pendientes deberán identificarse como tales.
+
+
+
+No crear informes que aparenten contener pruebas no ejecutadas.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 17. CRITERIOS DE ACEPTACIÓN ===
+# 17. CRITERIOS DE ACEPTACIÓN
+
+
+
+La fase solamente se considerará completa si:
+
+
+
+- Las reglas D1/H1/M5 están formalizadas.
+
+- Las diferencias respecto al video están documentadas.
+
+- Las configuraciones están congeladas.
+
+- Se ha verificado la cobertura de datos.
+
+- Los backtests ejecutados son reproducibles.
+
+- El sistema no utiliza información futura.
+
+- Los costos están contabilizados.
+
+- Las métricas se calculan desde operaciones simuladas reales.
+
+- La robustez ha sido evaluada o sus limitaciones están documentadas.
+
+- No se alteran las estrategias existentes.
+
+- No se envían órdenes a brokers.
+
+- No se conecta EXP-MTF01 a Moomoo.
+
+- LIVE continúa deshabilitado.
+
+- El veredicto final refleja los resultados sin exageraciones.
+
+
+
+---
+
+
+
+==================================================
+
+=== # 18. REPORTE EJECUTIVO FINAL ===
+# 18. REPORTE EJECUTIVO FINAL
+
+
+
+Antigravity deberá entregar:
+
+
+
+```text
+
+ORACLEBOT V2 — EXP-MTF01
+
+
+
+EXPERIMENT:
+
+MTF_ExtremeReversal_V1
+
+
+
+MODE:
+
+RESEARCH_ONLY / ANALYSIS_ONLY
+
+
+
+SPECIFICATION:
+
+FROZEN / INCOMPLETE / FAILED
+
+
+
+DATA:
+
+D1 Coverage:
+
+H1 Coverage:
+
+M5 Coverage:
+
+Data Source:
+
+Missing Periods:
+
+
+
+BACKTESTS:
+
+Planned:
+
+Executed:
+
+Valid:
+
+Insufficient Data:
+
+Total Trades:
+
+
+
+ECONOMIC RESULTS:
+
+Net PnL:
+
+Profit Factor:
+
+Win Rate:
+
+Expectancy:
+
+Maximum Drawdown:
+
+
+
+ROBUSTNESS:
+
+OOS:
+
+Walk-Forward:
+
+Monte Carlo:
+
+Cost Stress:
+
+Parameter Stability:
+
+
+
+INSTITUTIONAL SCORES:
+
+EES:
+
+PRS:
+
+SQS:
+
+Minimum Evidence Gate:
+
+
+
+SECURITY:
+
+D21 Integrity:
+
+MR Shadow Integrity:
+
+Momentum Shadow Integrity:
+
+EXP-ST02 Integrity:
+
+LIVE Trading: DISABLED
+
+PAPER Broker Orders: ZERO
+
+LIVE Broker Orders: ZERO
+
+
+
+REGRESSION TESTS:
+
+Passed:
+
+Failed:
+
+Skipped:
+
+
+
+FINAL VERDICT:
+
+REJECTED / INCONCLUSIVE /
+
+RESEARCH_CONTINUE /
+
+ELIGIBLE_FOR_MANUAL_REVIEW
+
+
+
+LIMITATIONS:
+
+...
+
+
+
+RECOMMENDATION:
+
+...
+
+
+
+NEXT REQUIRED ACTION:
+
+...
+
+```
+
+
+
+No indicar `VERIFIED` ni `PASS` si no existe una comprobación técnica correspondiente.
+
+
+
+---
+
+
+
+==================================================
+
