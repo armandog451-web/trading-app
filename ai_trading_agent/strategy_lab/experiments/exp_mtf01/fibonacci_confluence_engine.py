@@ -32,8 +32,9 @@ class FibonacciConfluenceEngine:
         """Calcula EMA 50 y ATR 14 en H1."""
         df = df_h1.copy()
         df.sort_index(inplace=True)
-        cols = {c: c.capitalize() for c in df.columns}
-        df.rename(columns=cols, inplace=True)
+        rename_map = {c: c.capitalize() for c in ['open', 'high', 'low', 'close', 'volume'] if c in df.columns}
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
 
         df['EMA50'] = df['Close'].ewm(span=self.ema_period, adjust=False).mean()
 

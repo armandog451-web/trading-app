@@ -29,8 +29,9 @@ class M5EntryEngine:
         """Calcula fractales locales en M5 causales."""
         df = df_m5.copy()
         df.sort_index(inplace=True)
-        cols = {c: c.capitalize() for c in df.columns}
-        df.rename(columns=cols, inplace=True)
+        rename_map = {c: c.capitalize() for c in ['open', 'high', 'low', 'close', 'volume'] if c in df.columns}
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
 
         n = len(df)
         df['M5_Swing_High'] = np.nan

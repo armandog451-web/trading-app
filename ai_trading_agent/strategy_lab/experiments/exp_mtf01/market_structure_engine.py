@@ -26,8 +26,9 @@ class MarketStructureEngine:
         """
         df = df_h1.copy()
         df.sort_index(inplace=True)
-        cols = {c: c.capitalize() for c in df.columns}
-        df.rename(columns=cols, inplace=True)
+        rename_map = {c: c.capitalize() for c in ['open', 'high', 'low', 'close', 'volume'] if c in df.columns}
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
 
         n = len(df)
         df['Is_Swing_High'] = False

@@ -37,8 +37,9 @@ class DailyContextEngine:
         df.sort_index(inplace=True)
 
         # Standardize column names
-        cols = {c: c.capitalize() for c in df.columns}
-        df.rename(columns=cols, inplace=True)
+        rename_map = {c: c.capitalize() for c in ['open', 'high', 'low', 'close', 'volume'] if c in df.columns}
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
 
         # True Range and ATR
         prev_close = df['Close'].shift(1)
