@@ -1,0 +1,146 @@
+[
+  {
+    "symbol": "SPY",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "SPY",
+    "tf": "H1",
+    "bars": 5076,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "SPY",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  },
+  {
+    "symbol": "QQQ",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "QQQ",
+    "tf": "H1",
+    "bars": 5077,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "QQQ",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  },
+  {
+    "symbol": "DIA",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "DIA",
+    "tf": "H1",
+    "bars": 5076,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "DIA",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  },
+  {
+    "symbol": "IWM",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "IWM",
+    "tf": "H1",
+    "bars": 5076,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "IWM",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  },
+  {
+    "symbol": "GLD",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "GLD",
+    "tf": "H1",
+    "bars": 5076,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "GLD",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  },
+  {
+    "symbol": "TLT",
+    "tf": "D1",
+    "bars": 1255,
+    "start": "2021-11-01",
+    "end": "2026-10-30",
+    "status": "SUFFICIENT (5y)"
+  },
+  {
+    "symbol": "TLT",
+    "tf": "H1",
+    "bars": 5077,
+    "start": "2023-12-04 14:30",
+    "end": "2026-10-30 19:30",
+    "status": "SUFFICIENT (730d)"
+  },
+  {
+    "symbol": "TLT",
+    "tf": "M5",
+    "bars": 4680,
+    "start": "2026-08-07 13:30",
+    "end": "2026-10-30 19:55",
+    "status": "REAL_M5_WINDOW_LIMITED (60d)"
+  }
+]
