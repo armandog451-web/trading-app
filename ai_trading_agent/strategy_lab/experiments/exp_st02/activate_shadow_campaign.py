@@ -170,20 +170,22 @@ def run_activation():
     print(f"   - Primera Barra Cierra a las: {first_close_utc}")
     print(f"   - SHA-256 Manifiesto Sellado: {manifest.manifest_sha256}")
 
-    # Registrar evento de sellado de activación en los ledgers
+    # Registrar evento de sellado de activación en los ledgers si no existe ya
     for cid, l in ledgers.items():
-        l.append_event(
-            event_type=ShadowEventTypeST02.HEARTBEAT,
-            payload={
-                "action": "ACTIVATION_SEALED",
-                "campaign_id": manifest.campaign_id,
-                "t0_activation_utc": t0_real_utc,
-                "first_eligible_session": first_session,
-                "manifest_sha256": sealed_hash,
-                "authorization": "GRANTED_BY_USER",
-            },
-            custom_entry_id=f"ACTIVATE-{cid}-{t0_real_utc[:10]}",
-        )
+        existing = [e for e in l.read_all_entries() if e.payload.get("action") == "ACTIVATION_SEALED"]
+        if not existing:
+            l.append_event(
+                event_type=ShadowEventTypeST02.HEARTBEAT,
+                payload={
+                    "action": "ACTIVATION_SEALED",
+                    "campaign_id": manifest.campaign_id,
+                    "t0_activation_utc": t0_real_utc,
+                    "first_eligible_session": first_session,
+                    "manifest_sha256": sealed_hash,
+                    "authorization": "GRANTED_BY_USER",
+                },
+                custom_entry_id=f"ACTIVATE-{cid}-{t0_real_utc.replace(':', '').replace('-', '').replace('.', '')}",
+            )
 
     # Actualizar Deliverable 10
     _write_deliverable_10(exp_st02_dir, manifest, first_close_utc)
