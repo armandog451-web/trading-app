@@ -1,0 +1,47 @@
+[
+  {
+    "Configuration": "Baseline_A_Full",
+    "Total_Signals": 0,
+    "Total_Trades": 0,
+    "Net_PnL": 0.0,
+    "Win_Rate": 0.0,
+    "Expectancy_R": 0.0,
+    "Description": "Sistema completo multitemporal"
+  },
+  {
+    "Configuration": "Ablation_B_No_D1",
+    "Total_Signals": 33,
+    "Total_Trades": 7,
+    "Net_PnL": 265.3,
+    "Win_Rate": 0.4286,
+    "Expectancy_R": 0.1514,
+    "Description": "Sin filtro de contexto D1 (solo H1+M5)"
+  },
+  {
+    "Configuration": "Ablation_C_No_Fib",
+    "Total_Signals": 0,
+    "Total_Trades": 0,
+    "Net_PnL": 0.0,
+    "Win_Rate": 0.0,
+    "Expectancy_R": 0.0,
+    "Description": "Sin confluencia Fibonacci 0.618"
+  },
+  {
+    "Configuration": "Ablation_D_No_EMA50",
+    "Total_Signals": 18,
+    "Total_Trades": 1,
+    "Net_PnL": -223.98,
+    "Win_Rate": 0.0,
+    "Expectancy_R": -0.896,
+    "Description": "Sin filtro EMA 50"
+  },
+  {
+    "Configuration": "Ablation_E_No_M5",
+    "Total_Signals": 0,
+    "Total_Trades": 0,
+    "Net_PnL": 0.0,
+    "Win_Rate": 0.0,
+    "Expectancy_R": 0.0,
+    "Description": "Entrada directa H1 sin confirmaci\u00f3n M5"
+  }
+]

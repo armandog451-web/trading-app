@@ -1,0 +1,13 @@
+Symbol,Variant,Signals,Trades,Net_PnL,Win_Rate,Profit_Factor,Expectancy_R,Max_Drawdown_Pct,Final_Equity
+SPY,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+SPY,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+QQQ,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+QQQ,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+DIA,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+DIA,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+IWM,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+IWM,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+GLD,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+GLD,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+TLT,MTF_V1A_Structure,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
+TLT,MTF_V1B_Fixed_2R,0,0,0.0,0.0,0.0,0.0,0.0,100000.0
