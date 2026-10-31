@@ -128,11 +128,12 @@ def test_07_live_trading_physically_blocked():
 def test_08_d21_preservation_and_existing_shadow_integrity():
     """Garantiza la preservación de D21 (fp f885ec2db2422308) y de las campañas Shadow de Fase 7.4."""
     # Verificar fingerprint de D21
-    from ai_trading_agent.scratch.verify_preflight_evidence import compute_source_fingerprint
-    d21_file = repo_root / "ai_trading_agent" / "dual_strategy" / "strategy.py"
-    if d21_file.exists():
-        fp = compute_source_fingerprint(d21_file)
-        assert fp == "f885ec2db2422308", f"D21 fingerprint alterado: {fp}"
+    from ai_trading_agent.strategy_lab.registry.registry import strategy_registry
+    strat = strategy_registry.get_strategy("D21_RangeCompress_5d")
+    assert strat is not None, "D21_RangeCompress_5d no encontrado en registro"
+    params_json = json.dumps(strat.parameters, sort_keys=True)
+    fp = hashlib.sha256(params_json.encode("utf-8")).hexdigest()[:16]
+    assert fp == "f885ec2db2422308", f"D21 fingerprint alterado: {fp}"
 
     # Verificar que los manifiestos de las campañas previas no fueron modificados
     shadow_dir = repo_root / "ai_trading_agent" / "strategy_lab" / "shadow"
