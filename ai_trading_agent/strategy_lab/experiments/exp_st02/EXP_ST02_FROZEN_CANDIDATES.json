@@ -1,0 +1,162 @@
+[
+  {
+    "candidate_id": "ST02-GLD-BASE",
+    "symbol": "GLD",
+    "timeframe": "H1",
+    "variant": "BASELINE_TP_1_5R",
+    "parameters": {
+      "ema_period": 200,
+      "atr_period": 10,
+      "supertrend_multiplier": 3.0,
+      "entry_execution": "CAUSAL_T_PLUS_1_OPEN",
+      "tp_r_multiple": 1.5,
+      "sl_buffer": 0.0
+    },
+    "h5_specification": null,
+    "virtual_capital_usd": 100000.0,
+    "risk_per_trade_usd": 250.0,
+    "risk_pct_nominal": 0.25,
+    "max_positions": 1,
+    "cost_model": {
+      "name": "1x_Base",
+      "slippage_bps": 2.0,
+      "commission_per_share": 0.005
+    },
+    "code_fingerprints": {
+      "supertrend_indicator.py": "5558342ebed28def922526c90ab7188acd4ec6cf3b9cda3baa77f9c98e586f58",
+      "st_ema200_strategy.py": "fee431e0f529ffdf139e2d7557f08c53dd7946447c5a97ff296a6a591c110873",
+      "st_ema200_backtester.py": "88311007d71fcb3b608e08f677b4550771212d8b2d7558c44b909b22fdaeeb59",
+      "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
+    },
+    "data_fingerprint": "4eb1e5cf8deff4348f048cbd92cfd6c0d50f7d9412579064280580278db34be6",
+    "frozen_manifest_hash": "f47c78a3ce1e6533d83cb98f37cb3cd40451fe8f5d2dd9c9bf55a8cb8660213b",
+    "frozen_timestamp_utc": "2026-10-31T14:29:39.259718+00:00",
+    "git_commit": "39cc2cf"
+  },
+  {
+    "candidate_id": "ST02-GLD-H5",
+    "symbol": "GLD",
+    "timeframe": "H1",
+    "variant": "H5_ADAPTIVE_TRAILING",
+    "parameters": {
+      "ema_period": 200,
+      "atr_period": 10,
+      "supertrend_multiplier": 3.0,
+      "entry_execution": "CAUSAL_T_PLUS_1_OPEN",
+      "tp_r_multiple": null,
+      "sl_buffer": 0.0
+    },
+    "h5_specification": {
+      "mechanism": "SUPER_TREND_ADAPTIVE_TRAILING_STOP",
+      "initial_stop_loss": "SuperTrend line value at signal bar T close",
+      "monotonicity": {
+        "LONG": "Strictly non-decreasing: current_sl = max(current_sl, SuperTrend.line) when trend == +1",
+        "SHORT": "Strictly non-increasing: current_sl = min(current_sl, SuperTrend.line) when trend == -1"
+      },
+      "update_timing": "Evaluated and updated at bar k close; active for subsequent bars",
+      "intrabar_exit": "Exit if Low <= current_sl (Long) or High >= current_sl (Short)",
+      "gap_handling": "Fill at bar k open if open penetrates current_sl (adverse fill with slippage)",
+      "trend_flip_exit": "Forced exit if SuperTrend flips direction opposite to trade",
+      "retroactivity": "PROHIBITED: Stops never apply retroactively to previous bars or current bar open"
+    },
+    "virtual_capital_usd": 100000.0,
+    "risk_per_trade_usd": 250.0,
+    "risk_pct_nominal": 0.25,
+    "max_positions": 1,
+    "cost_model": {
+      "name": "1x_Base",
+      "slippage_bps": 2.0,
+      "commission_per_share": 0.005
+    },
+    "code_fingerprints": {
+      "supertrend_indicator.py": "5558342ebed28def922526c90ab7188acd4ec6cf3b9cda3baa77f9c98e586f58",
+      "st_ema200_strategy.py": "fee431e0f529ffdf139e2d7557f08c53dd7946447c5a97ff296a6a591c110873",
+      "st_ema200_backtester.py": "88311007d71fcb3b608e08f677b4550771212d8b2d7558c44b909b22fdaeeb59",
+      "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
+    },
+    "data_fingerprint": "4eb1e5cf8deff4348f048cbd92cfd6c0d50f7d9412579064280580278db34be6",
+    "frozen_manifest_hash": "98281ed75b8486d4f4d7af301366823d28e7bbcbef5b0361c9c9f973c5fa7d01",
+    "frozen_timestamp_utc": "2026-10-31T14:29:39.259718+00:00",
+    "git_commit": "39cc2cf"
+  },
+  {
+    "candidate_id": "ST02-DIA-BASE",
+    "symbol": "DIA",
+    "timeframe": "H1",
+    "variant": "BASELINE_TP_1_5R",
+    "parameters": {
+      "ema_period": 200,
+      "atr_period": 10,
+      "supertrend_multiplier": 3.0,
+      "entry_execution": "CAUSAL_T_PLUS_1_OPEN",
+      "tp_r_multiple": 1.5,
+      "sl_buffer": 0.0
+    },
+    "h5_specification": null,
+    "virtual_capital_usd": 100000.0,
+    "risk_per_trade_usd": 250.0,
+    "risk_pct_nominal": 0.25,
+    "max_positions": 1,
+    "cost_model": {
+      "name": "1x_Base",
+      "slippage_bps": 2.0,
+      "commission_per_share": 0.005
+    },
+    "code_fingerprints": {
+      "supertrend_indicator.py": "5558342ebed28def922526c90ab7188acd4ec6cf3b9cda3baa77f9c98e586f58",
+      "st_ema200_strategy.py": "fee431e0f529ffdf139e2d7557f08c53dd7946447c5a97ff296a6a591c110873",
+      "st_ema200_backtester.py": "88311007d71fcb3b608e08f677b4550771212d8b2d7558c44b909b22fdaeeb59",
+      "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
+    },
+    "data_fingerprint": "23ad94887cefd632581a0f42d23e4d6278c9c1882a35a757ee31f0748a9bf8a6",
+    "frozen_manifest_hash": "aab05d621bd2bf8c0abe08bd79cd55e92ea2d4c62c2ef5b7522a929b6bfc2861",
+    "frozen_timestamp_utc": "2026-10-31T14:29:39.259718+00:00",
+    "git_commit": "39cc2cf"
+  },
+  {
+    "candidate_id": "ST02-DIA-H5",
+    "symbol": "DIA",
+    "timeframe": "H1",
+    "variant": "H5_ADAPTIVE_TRAILING",
+    "parameters": {
+      "ema_period": 200,
+      "atr_period": 10,
+      "supertrend_multiplier": 3.0,
+      "entry_execution": "CAUSAL_T_PLUS_1_OPEN",
+      "tp_r_multiple": null,
+      "sl_buffer": 0.0
+    },
+    "h5_specification": {
+      "mechanism": "SUPER_TREND_ADAPTIVE_TRAILING_STOP",
+      "initial_stop_loss": "SuperTrend line value at signal bar T close",
+      "monotonicity": {
+        "LONG": "Strictly non-decreasing: current_sl = max(current_sl, SuperTrend.line) when trend == +1",
+        "SHORT": "Strictly non-increasing: current_sl = min(current_sl, SuperTrend.line) when trend == -1"
+      },
+      "update_timing": "Evaluated and updated at bar k close; active for subsequent bars",
+      "intrabar_exit": "Exit if Low <= current_sl (Long) or High >= current_sl (Short)",
+      "gap_handling": "Fill at bar k open if open penetrates current_sl (adverse fill with slippage)",
+      "trend_flip_exit": "Forced exit if SuperTrend flips direction opposite to trade",
+      "retroactivity": "PROHIBITED: Stops never apply retroactively to previous bars or current bar open"
+    },
+    "virtual_capital_usd": 100000.0,
+    "risk_per_trade_usd": 250.0,
+    "risk_pct_nominal": 0.25,
+    "max_positions": 1,
+    "cost_model": {
+      "name": "1x_Base",
+      "slippage_bps": 2.0,
+      "commission_per_share": 0.005
+    },
+    "code_fingerprints": {
+      "supertrend_indicator.py": "5558342ebed28def922526c90ab7188acd4ec6cf3b9cda3baa77f9c98e586f58",
+      "st_ema200_strategy.py": "fee431e0f529ffdf139e2d7557f08c53dd7946447c5a97ff296a6a591c110873",
+      "st_ema200_backtester.py": "88311007d71fcb3b608e08f677b4550771212d8b2d7558c44b909b22fdaeeb59",
+      "discovery_hypotheses.py": "510f0bf16eba9f559f7d1e42406f71aaea10d41c8bb45a6389ca6fd277151ecf"
+    },
+    "data_fingerprint": "23ad94887cefd632581a0f42d23e4d6278c9c1882a35a757ee31f0748a9bf8a6",
+    "frozen_manifest_hash": "8205e4855ea2ecdd1ffa648d2e4884a0aa56b60b0a5f89d40b5bbd9e6a6409e5",
+    "frozen_timestamp_utc": "2026-10-31T14:29:39.259718+00:00",
+    "git_commit": "39cc2cf"
+  }
+]
