@@ -185,7 +185,9 @@ class TestGroupF_InstitutionalIsolation:
 
     def test_live_trading_disabled(self):
         from ai_trading_agent.config.settings import settings
-        assert settings.ENABLE_LIVE_TRADING is False
+        from ai_trading_agent.domain.enums import TradingMode
+        assert settings.TRADING_MODE != "LIVE"
+        assert settings.ENVIRONMENT == "local_simulation"
 
     def test_protected_manifests_intact(self):
         p1 = r"C:\Users\edsel\Documents\trading-app-repo\ai_trading_agent\strategy_lab\experiments\exp_mtf01\EXP_MTF01_PARAMETER_MANIFEST.json"
