@@ -22,8 +22,14 @@ for sym in symbols:
     df_h1 = pd.read_csv(os.path.join(data_dir, f"{sym}_1h.csv"), index_col=0, parse_dates=True)
     df_m5 = pd.read_csv(os.path.join(data_dir, f"{sym}_5m.csv"), index_col=0, parse_dates=True)
 
+    if df_d1.index.tz is None:
+        df_d1.index = df_d1.index.tz_localize('UTC')
+    if df_h1.index.tz is None:
+        df_h1.index = df_h1.index.tz_localize('UTC')
+    if df_m5.index.tz is None:
+        df_m5.index = df_m5.index.tz_localize('UTC')
+
     d1_feat = d1_eng.compute_daily_features(df_d1)
-    # Filter to the M5 window (August 2026 to October 2026)
     m5_start = df_m5.index[0]
     d1_window = d1_feat[d1_feat.index >= m5_start]
 
@@ -35,7 +41,7 @@ for sym in symbols:
     d1_bear_ctx = d1_window['D1_Bearish_Context'].sum()
 
     print(f"\n{sym} (M5 Window: {m5_start.strftime('%Y-%m-%d')} to {df_m5.index[-1].strftime('%Y-%m-%d')}):")
-    print(f"  D1 Bars: {len(d1_window)}")
+    print(f"  D1 Bars in window: {len(d1_window)}")
     print(f"  D1 Lower Extremes: {d1_bull_extremes}, Accel Down: {d1_bull_accel}, Bullish Context: {d1_bull_ctx}")
     print(f"  D1 Upper Extremes: {d1_bear_extremes}, Accel Up: {d1_bear_accel}, Bearish Context: {d1_bear_ctx}")
 
@@ -45,4 +51,4 @@ for sym in symbols:
 
     bos_bull = h1_window['BOS_Bullish'].sum()
     bos_bear = h1_window['BOS_Bearish'].sum()
-    print(f"  H1 Bars: {len(h1_window)}, H1 Bullish BOS: {bos_bull}, H1 Bearish BOS: {bos_bear}")
+    print(f"  H1 Bars in window: {len(h1_window)}, H1 Bullish BOS: {bos_bull}, H1 Bearish BOS: {bos_bear}")

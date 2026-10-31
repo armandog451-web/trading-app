@@ -26,6 +26,14 @@ def load_data(sym: str):
     df_d1 = pd.read_csv(os.path.join(data_dir, f"{sym}_1d.csv"), index_col=0, parse_dates=True)
     df_h1 = pd.read_csv(os.path.join(data_dir, f"{sym}_1h.csv"), index_col=0, parse_dates=True)
     df_m5 = pd.read_csv(os.path.join(data_dir, f"{sym}_5m.csv"), index_col=0, parse_dates=True)
+
+    if df_d1.index.tz is None:
+        df_d1.index = df_d1.index.tz_localize('UTC')
+    if df_h1.index.tz is None:
+        df_h1.index = df_h1.index.tz_localize('UTC')
+    if df_m5.index.tz is None:
+        df_m5.index = df_m5.index.tz_localize('UTC')
+
     return df_d1, df_h1, df_m5
 
 def run_experiment_suite():
