@@ -1,7 +1,7 @@
 # ENTREGABLE 06 — AUDITORÍA FORMAL DE SESGO DE SELECCIÓN
 ## Hipótesis H5 (Adaptive Trailing Stop) | Protocolo Institucional
 
-**Fecha:** 2026-10-31 11:16:08 UTC  
+**Fecha:** 2026-10-31 11:34:07 UTC  
 **Dictamen de Sesgo:** `HISTORICAL_HOLDOUT_NOT_INDEPENDENT`  
 
 ---

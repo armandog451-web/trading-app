@@ -1,7 +1,7 @@
 {
   "campaign_id": "CAMP-SHADOW-EXP-ST02-2026",
   "version": "1.0.0",
-  "created_at_utc": "2026-10-31T15:16:08.932595+00:00",
+  "created_at_utc": "2026-10-31T15:34:07.353308+00:00",
   "t0_activation_utc": "NOT_ACTIVATED_AWAITING_AUTH",
   "first_eligible_session": null,
   "current_state": "AUTHORIZATION_REQUIRED",
@@ -60,5 +60,5 @@
     "live_trading_physically_blocked": true,
     "broker_orders_count": 0
   },
-  "manifest_sha256": "bc4ce1dc64489930709dace827b2ed5fa19e240188f710124fbe840047052e1c"
+  "manifest_sha256": "2ba56fcdf5cf54fd38196fe345ff79c54fa84e445c70291c130f1fe13ae2003d"
 }
