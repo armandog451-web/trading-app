@@ -1,6 +1,7 @@
 import os
 import yfinance as yf
 import pandas as pd
+import json
 from datetime import datetime
 
 symbols = ["SPY", "QQQ", "DIA", "IWM", "GLD", "TLT"]
@@ -20,11 +21,14 @@ for sym in symbols:
     # D1 (Daily, 5 years)
     df_d1 = yf.download(sym, period="5y", interval="1d", progress=False)
     if not df_d1.empty:
+        # Flatten MultiIndex columns if present
+        if isinstance(df_d1.columns, pd.MultiIndex):
+            df_d1.columns = df_d1.columns.get_level_values(0)
         d1_bars = len(df_d1)
         d1_start = df_d1.index[0].strftime("%Y-%m-%d")
         d1_end = df_d1.index[-1].strftime("%Y-%m-%d")
         d1_status = "SUFFICIENT (5y)"
-        df_d1.to_parquet(os.path.join(data_dir, f"{sym}_1d.parquet"))
+        df_d1.to_csv(os.path.join(data_dir, f"{sym}_1d.csv"))
     else:
         d1_bars = 0; d1_start = "N/A"; d1_end = "N/A"; d1_status = "NO_DATA"
     report_lines.append(f"| {sym} | D1 | 5y | {d1_bars} | {d1_start} | {d1_end} | {d1_status} |")
@@ -33,30 +37,34 @@ for sym in symbols:
     # H1 (Hourly, 730 days max for yfinance)
     df_h1 = yf.download(sym, period="730d", interval="1h", progress=False)
     if not df_h1.empty:
+        if isinstance(df_h1.columns, pd.MultiIndex):
+            df_h1.columns = df_h1.columns.get_level_values(0)
         h1_bars = len(df_h1)
         h1_start = df_h1.index[0].strftime("%Y-%m-%d %H:%M")
         h1_end = df_h1.index[-1].strftime("%Y-%m-%d %H:%M")
         h1_status = "SUFFICIENT (730d)"
-        df_h1.to_parquet(os.path.join(data_dir, f"{sym}_1h.parquet"))
+        df_h1.to_csv(os.path.join(data_dir, f"{sym}_1h.csv"))
     else:
         h1_bars = 0; h1_start = "N/A"; h1_end = "N/A"; h1_status = "NO_DATA"
-    report_lines.append(f"| {sym} | H1 | 730d | {h1_bars} | {d1_start} | {d1_end} | {h1_status} |")
+    report_lines.append(f"| {sym} | H1 | 730d | {h1_bars} | {h1_start} | {h1_end} | {h1_status} |")
     summary_table.append({"symbol": sym, "tf": "H1", "bars": h1_bars, "start": h1_start, "end": h1_end, "status": h1_status})
 
     # M5 (5 minutes, 60 days max for yfinance free API)
     df_m5 = yf.download(sym, period="60d", interval="5m", progress=False)
     if not df_m5.empty:
+        if isinstance(df_m5.columns, pd.MultiIndex):
+            df_m5.columns = df_m5.columns.get_level_values(0)
         m5_bars = len(df_m5)
         m5_start = df_m5.index[0].strftime("%Y-%m-%d %H:%M")
         m5_end = df_m5.index[-1].strftime("%Y-%m-%d %H:%M")
         m5_status = "REAL_M5_WINDOW_LIMITED (60d)"
-        df_m5.to_parquet(os.path.join(data_dir, f"{sym}_5m.parquet"))
+        df_m5.to_csv(os.path.join(data_dir, f"{sym}_5m.csv"))
     else:
         m5_bars = 0; m5_start = "N/A"; m5_end = "N/A"; m5_status = "NO_DATA"
     report_lines.append(f"| {sym} | M5 | 60d | {m5_bars} | {m5_start} | {m5_end} | {m5_status} |")
     summary_table.append({"symbol": sym, "tf": "M5", "bars": m5_bars, "start": m5_start, "end": m5_end, "status": m5_status})
 
-print("Completed download and parquet caching.")
+print("Completed download and CSV caching.")
 with open(r"C:\Users\edsel\Documents\trading-app-repo\ai_trading_agent\strategy_lab\experiments\exp_mtf01\data_audit_summary.json", "w", encoding="utf-8") as f:
     json.dump(summary_table, f, indent=2)
 
