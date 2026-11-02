@@ -23,7 +23,7 @@ from pathlib import Path
 import json
 
 from ai_trading_agent.config.settings import settings
-from ai_trading_agent.domain.models import PaperOrder, OHLCVBar
+from ai_trading_agent.domain.models import PaperOrder, OHLCVBar, Position
 from ai_trading_agent.domain.enums import OrderSide, OrderType, OrderStatus
 from ai_trading_agent.execution.brokers.unified_manager import UnifiedBrokerManager
 from ai_trading_agent.execution.paper_broker import PaperBroker
@@ -282,13 +282,18 @@ def test_15_restart_between_check_and_order_submission():
 
 def test_16_legacy_positions_and_qqq_short_exposure_assessment():
     """16. Verifica posición heredada de 573 SPY y señal SELL QQQ sin posición (intento de corto)."""
+    now = datetime.utcnow()
     open_positions = [
         Position(
             symbol="SPY",
+            side=OrderSide.BUY,
             quantity=573,
-            entry_price=523.47,
+            avg_entry_price=523.47,
             current_price=523.47,
-            side=OrderSide.BUY
+            stop_loss=500.0,
+            take_profit=560.0,
+            opened_at=now,
+            updated_at=now
         )
     ]
     # QQQ no tiene posición
