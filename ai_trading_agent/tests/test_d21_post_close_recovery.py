@@ -160,10 +160,9 @@ def test_8_shadow_campaign_independence():
     assert "CS_RelMom_VolAdj_V2" in manifests
 
     evaluator = AutonomousShadowEvaluator(
+        repo_root=repo_root,
         manifest_a=manifests["MR_VolCond_ZScore_V1"],
-        manifest_b=manifests["CS_RelMom_VolAdj_V2"],
-        storage_dir=repo_root / "ai_trading_agent" / "strategy_lab" / "shadow" / "test_data",
-        cost_scenario="1x_BASE"
+        manifest_b=manifests["CS_RelMom_VolAdj_V2"]
     )
 
     status = evaluator.get_status_summary()
