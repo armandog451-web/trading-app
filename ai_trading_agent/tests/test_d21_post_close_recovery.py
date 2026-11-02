@@ -173,7 +173,7 @@ def test_8_shadow_campaign_independence():
 
 def test_9_exp_st02_isolation_and_zero_orders():
     """9. Verifica que EXP-ST02 mantenga sus ledgers incorruptos y 0 A3rdenes de broker."""
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent
     ledgers_dir = repo_root / "ai_trading_agent" / "strategy_lab" / "experiments" / "exp_st02" / "ledgers"
     for cid in ["ST02-GLD-BASE", "ST02-GLD-H5", "ST02-DIA-BASE", "ST02-DIA-H5"]:
         ledger_file = ledgers_dir / f"ledger_{cid}.jsonl"
