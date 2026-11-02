@@ -154,7 +154,7 @@ def test_7_d21_failed_evaluation_recovery_simulation():
 
 def test_8_shadow_campaign_independence():
     """8. Verifica que AutonomousShadowEvaluator pueda evaluar candidatos A y B independientemente de D21."""
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent
     manifests = generate_freeze_manifests(repo_root)
     assert "MR_VolCond_ZScore_V1" in manifests
     assert "CS_RelMom_VolAdj_V2" in manifests
