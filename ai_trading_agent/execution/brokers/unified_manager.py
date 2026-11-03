@@ -5,12 +5,15 @@ Enrutador y gestor de brokers unificado para AI Trading Agent 1.0 (SuperRobot).
 Permite alternar entre Moomoo OpenD, Alpaca Markets y Paper Broker interno.
 """
 
+import logging
 from typing import Dict, Any, List
 from ai_trading_agent.config.settings import settings
 from ai_trading_agent.domain.models import PaperOrder
 from ai_trading_agent.execution.paper_broker import paper_broker
 from ai_trading_agent.execution.brokers.moomoo_adapter import moomoo_adapter
 from ai_trading_agent.execution.brokers.alpaca_adapter import alpaca_adapter
+
+logger = logging.getLogger(__name__)
 
 
 class UnifiedBrokerManager:
@@ -64,8 +67,24 @@ class UnifiedBrokerManager:
         else:
             return [p.model_dump() for p in paper_broker.get_positions()]
 
+    def get_orders(self) -> List[Dict[str, Any]]:
+        """
+        Recupera las órdenes del broker activo.
+        POLÍTICA FAIL_CLOSED: Si el adaptador no implementa el método o falla,
+        propaga la excepción para impedir que un falso vacío permita órdenes duplicadas.
+        """
+        active = self.current_adapter
+        if not hasattr(active, "get_orders"):
+            raise NotImplementedError(f"El broker activo '{self.active_broker_name}' no implementa get_orders().")
+        return active.get_orders()
+
     def submit_order(self, order: PaperOrder, mode=None) -> PaperOrder:
         """Envía la orden a través del broker activo respetando el modo operativo."""
+        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN (Modo CONTROLLED_RECOVERY)
+        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True):
+            logger.critical("EJECUCIÓN PAPER BLOQUEADA: Barrera institucional activa en UnifiedBrokerManager.submit_order()")
+            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
+
         if self.active_broker_name == "moomoo":
             return moomoo_adapter.submit_order(order)
         elif self.active_broker_name == "alpaca":
