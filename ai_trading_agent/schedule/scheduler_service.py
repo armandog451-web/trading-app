@@ -243,6 +243,16 @@ class MarketScheduleService:
         if self._is_task_done_today(task_id, date_str):
             return
 
+        # Circuito de contención: Máximo 3 reintentos antes de FAILED_FINAL
+        fail_count = self._get_task_failure_count_today(task_id, date_str)
+        if fail_count >= 3:
+            if not self._has_logged_failed_final(task_id, date_str):
+                logger.critical(f"{task_id} alcanzó 3 reintentos fallidos. Transición a FAILED_FINAL.")
+                self._record_task_execution(task_id, date_str, "FAILED_FINAL", {
+                    "error": "Límite de reintentos excedido (3). Requiere intervención manual."
+                })
+            return
+
         if now_et.time() >= time(16, 15):
             logger.info(f"MarketScheduleService: Ejecutando Informe Diario Post-Cierre ({date_str})...")
             await self.run_daily_report(force=False, is_auto=True)
@@ -404,11 +414,26 @@ class MarketScheduleService:
             signal_count += 1
             last_evaluated_bar = getattr(bars[-1], 'timestamp', None) or (bars[-1].get('date') if isinstance(bars[-1], dict) else None)
             
-            # Protección de idempotencia contra órdenes duplicadas en la misma fecha
-            today_str = datetime.utcnow().strftime("%Y-%m-%d")
-            existing_orders = unified_broker.get_orders()
-            if any(o.get("symbol") == symbol and str(o.get("created_at", "")).startswith(today_str) for o in existing_orders):
-                logger.info(f"D21 Idempotency: Order for {symbol} already submitted today ({today_str}). Skipping duplicate.")
+            # Protección de idempotencia contra órdenes duplicadas en la misma fecha bursátil de NY
+            from zoneinfo import ZoneInfo
+            ny_tz = ZoneInfo("America/New_York")
+            today_ny = datetime.now(ny_tz).strftime("%Y-%m-%d")
+            order_intent_key = f"D21_{symbol}_{today_ny}"
+
+            try:
+                existing_orders = unified_broker.get_orders()
+            except Exception as broker_err:
+                logger.error(f"Fallo al consultar órdenes en broker: {broker_err}. Bloqueando emisión (FAIL_CLOSED).")
+                evaluated_symbols[symbol] = "BLOCKED_BROKER_VERIFICATION_FAILED"
+                raise RuntimeError(f"Bloqueo estricto por verificación fallida de órdenes: {broker_err}")
+
+            already_in_broker = any(
+                o.get("symbol") == symbol and str(o.get("created_at", "")).startswith(today_ny)
+                for o in existing_orders
+            )
+            already_in_db = self._has_local_order_today(symbol, today_ny)
+            if already_in_broker or already_in_db:
+                logger.info(f"D21 Idempotency: Orden para {symbol} ya enviada hoy ({today_ny}).")
                 evaluated_symbols[symbol] = "SKIPPED_ALREADY_SUBMITTED_TODAY"
                 continue
 
@@ -605,18 +630,90 @@ class MarketScheduleService:
     # --- ESTADO Y PERSISTENCIA DE IDEMPOTENCIA ---
 
     def _is_task_done_today(self, task_id: str, date_str: str) -> bool:
-        """Verifica si la tarea ya fue completada exitosamente hoy en memoria o en SQLite."""
+        """Verifica si la tarea ya fue completada (SUCCESS o FAILED_FINAL) hoy en memoria o en SQLite."""
         if task_id in self._last_executions:
             exec_data = self._last_executions[task_id]
-            if exec_data.get("status") == "SUCCESS" and exec_data.get("date") == date_str:
+            if exec_data.get("status") in ("SUCCESS", "FAILED_FINAL") and exec_data.get("date") == date_str:
                 return True
 
         # Consultar repositorio SQLite
         try:
             logs = audit_repo.get_task_logs(task_id=task_id, date_str=date_str)
-            return any(l.get("status") == "SUCCESS" for l in logs)
+            return any(l.get("status") in ("SUCCESS", "FAILED_FINAL") for l in logs)
         except Exception:
             return False
+
+    def _get_task_failure_count_today(self, task_id: str, date_str: str) -> int:
+        """Cuenta el número de fallos registrados para una tarea en la fecha."""
+        try:
+            logs = audit_repo.get_task_logs(task_id=task_id, date_str=date_str)
+            return sum(1 for l in logs if l.get("status") == "FAILED")
+        except Exception:
+            return 0
+
+    def _has_logged_failed_final(self, task_id: str, date_str: str) -> bool:
+        """Verifica si ya se registró el estado FAILED_FINAL para la tarea hoy."""
+        try:
+            logs = audit_repo.get_task_logs(task_id=task_id, date_str=date_str)
+            return any(l.get("status") == "FAILED_FINAL" for l in logs)
+        except Exception:
+            return False
+
+    def _has_local_order_today(self, symbol: str, date_str: str) -> bool:
+        """Verifica si ya existe una orden registrada en paper_orders_audit o decisions_audit para la fecha."""
+        try:
+            with audit_repo.get_session() as session:
+                from ai_trading_agent.data.storage.models import DBPaperOrder, DBDecisionRecord
+                po = session.query(DBPaperOrder).filter(
+                    DBPaperOrder.symbol == symbol,
+                    DBPaperOrder.created_at >= f"{date_str} 00:00:00"
+                ).first()
+                if po:
+                    return True
+                dec = session.query(DBDecisionRecord).filter(
+                    DBDecisionRecord.symbol == symbol,
+                    DBDecisionRecord.timestamp >= f"{date_str} 00:00:00",
+                    DBDecisionRecord.risk_decision == "APPROVED"
+                ).first()
+                if dec:
+                    return True
+        except Exception as e:
+            logger.warning(f"Error consultando auditoría local de órdenes: {e}")
+        return False
+
+    def record_d21_analytical_observation(
+        self,
+        symbol: str,
+        signal_data: Dict[str, Any],
+        session_date: str = "2026-11-02",
+        recovery_time_utc: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Registra la señal de D21 de forma exclusivamente analítica en auditoría,
+        sin invocar submit_order(), sin tocar Moomoo y sin modificar posiciones Paper.
+        Clasificación: OBSERVED_AT_CLOSE_NO_ORDER.
+        """
+        now_utc = recovery_time_utc or datetime.now(timezone.utc).isoformat()
+        observation_payload = {
+            "session_date": session_date,
+            "symbol": symbol,
+            "direction": signal_data.get("direction", "SELL"),
+            "entry_reference_price": signal_data.get("entry_price", 681.09),
+            "stop_loss": signal_data.get("stop_loss", 703.93),
+            "take_profit": signal_data.get("take_profit", 635.42),
+            "original_bar_close": signal_data.get("timestamp") or f"{session_date} 16:00:00 EST",
+            "recovery_timestamp_utc": now_utc,
+            "classification": "OBSERVED_AT_CLOSE_NO_ORDER",
+            "non_execution_reason": "Sin posición previa de QQQ (venta corta no autorizada en cuenta ETF spot paper) y evaluación extemporánea con sesión cerrada.",
+            "orders_submitted": 0,
+            "positions_modified": 0,
+            "broker_action": "NONE_AIR_GAPPED"
+        }
+
+        task_id = f"d21_recovery_obs_{symbol}_{session_date}"
+        self._record_task_execution(task_id, session_date, "SUCCESS", observation_payload)
+        logger.info(f"D21 Analytical Observation registrada: {task_id} - OBSERVED_AT_CLOSE_NO_ORDER")
+        return observation_payload
 
     def _record_task_execution(self, task_id: str, date_str: str, status: str, payload: Dict[str, Any]):
         """Persiste la ejecución en memoria y en la base de datos de auditoría."""
