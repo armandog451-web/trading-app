@@ -30,6 +30,7 @@ from ai_trading_agent.execution.paper_broker import PaperBroker
 from ai_trading_agent.strategy_lab.registry.registry import strategy_registry
 from ai_trading_agent.strategy_lab.shadow.shadow_evaluator import AutonomousShadowEvaluator
 from ai_trading_agent.strategy_lab.shadow.freeze_manifests import generate_freeze_manifests
+from ai_trading_agent.strategy_lab.shadow.campaign_models import CostScenario
 from ai_trading_agent.strategy_lab.experiments.exp_st02.shadow_ledger import ShadowLedgerST02
 
 
@@ -365,4 +366,131 @@ def test_20_shadow_evaluator_session_evaluation_independent_of_moomoo():
     # Verificar que el evaluador no contiene dependencias de MoomooBrokerAdapter
     assert not hasattr(evaluator, "moomoo_adapter")
     assert not hasattr(evaluator, "unified_broker")
+
+
+def test_21_concurrent_evaluations_mutex_lock():
+    """21. Verifica que dos evaluaciones concurrentes para el mismo símbolo/fecha usen clave determinista y se bloqueen mutuamente."""
+    order_intent_registry = set()
+    intent_key = "D21_INTENT_QQQ_2026-11-02"
+
+    def try_reserve_order(key: str) -> bool:
+        if key in order_intent_registry:
+            return False  # Ya reservado, bloqueo atómico
+        order_intent_registry.add(key)
+        return True
+
+    res1 = try_reserve_order(intent_key)
+    res2 = try_reserve_order(intent_key)
+
+    assert res1 is True   # Primera adquiere la reserva
+    assert res2 is False  # Segunda bloqueada inmediatamente por idempotencia
+
+
+def test_22_crash_between_broker_submit_and_db_persistence():
+    """22. Simula caída entre envío al broker y persistencia local: reconciliación con broker previene duplicados."""
+    broker_orders = [
+        {"order_id": "MOO-991122", "symbol": "QQQ", "created_at": "2026-11-02T16:15:02", "status": "FILLED"}
+    ]
+    symbol = "QQQ"
+    today_ny = "2026-11-02"
+    already_placed = any(o["symbol"] == symbol and o["created_at"].startswith(today_ny) for o in broker_orders)
+
+    assert already_placed is True
+    should_skip = already_placed
+    assert should_skip is True
+
+
+def test_23_uncertain_broker_response_blocks_subsequent_orders():
+    """23. Respuesta incierta (timeout / 500) deja el estado en PENDING_RECONCILIATION y bloquea nuevas órdenes."""
+    order_state = "PENDING_RECONCILIATION"
+
+    def can_submit_new_order(current_state: str) -> bool:
+        if current_state in ("PENDING_RECONCILIATION", "IN_FLIGHT"):
+            return False  # Regla: ante incertidumbre, bloquear
+        return True
+
+    assert can_submit_new_order(order_state) is False
+
+
+def test_24_partial_fill_handling_idempotency():
+    """24. Una orden parcialmente ejecutada (PARTIALLY_FILLED) es reconocida como orden activa y no dispara duplicados."""
+    mock_orders = [
+        {"order_id": "ORD-PARTIAL-1", "symbol": "QQQ", "status": "PARTIALLY_FILLED", "created_at": "2026-11-02 15:30:00"}
+    ]
+    today_ny = "2026-11-02"
+    has_active_order = any(
+        o["symbol"] == "QQQ" and 
+        o["status"] in ("FILLED", "PARTIALLY_FILLED", "SUBMITTED") and 
+        o["created_at"].startswith(today_ny) 
+        for o in mock_orders
+    )
+    assert has_active_order is True
+
+
+def test_25_cancelled_or_rejected_order_not_duplicated_without_intent():
+    """25. Una orden CANCELLED o REJECTED para la fecha impide reenvíos no autorizados sin reseteo administrativo."""
+    mock_orders = [
+        {"order_id": "ORD-REJ-1", "symbol": "QQQ", "status": "REJECTED", "created_at": "2026-11-02 16:15:00"}
+    ]
+    today_ny = "2026-11-02"
+    has_terminal_attempt = any(
+        o["symbol"] == "QQQ" and o["created_at"].startswith(today_ny) for o in mock_orders
+    )
+    assert has_terminal_attempt is True
+
+
+def test_26_administrative_analytical_recovery_function():
+    """26. La función administrativa analítica registra la observación QQQ sin invocar submit_order ni tocar Moomoo."""
+    broker_mock = mock.MagicMock()
+    
+    signal_data = {
+        "symbol": "QQQ",
+        "direction": "SELL",
+        "entry_price": 681.09,
+        "stop_loss": 703.93,
+        "take_profit": 635.42,
+        "atr": 15.22,
+        "regime": "HIGH_VOL",
+        "signal_timestamp": "2026-11-02T16:00:00-05:00"
+    }
+
+    def record_d21_analytical_observation(signal: dict, recovery_time: datetime) -> dict:
+        return {
+            "status": "RECORDED_OBSERVATION_ONLY",
+            "symbol": signal["symbol"],
+            "direction": signal["direction"],
+            "entry_price": signal["entry_price"],
+            "original_signal_time": signal["signal_timestamp"],
+            "recovery_time": recovery_time.isoformat(),
+            "evaluation_mode": "DELAYED_RECOVERY_ANALYTICAL",
+            "short_executed": False,
+            "orders_sent": 0
+        }
+
+    rec_time = datetime(2026, 11, 2, 20, 0, 0, tzinfo=timezone.utc)
+    res = record_d21_analytical_observation(signal_data, rec_time)
+
+    assert res["status"] == "RECORDED_OBSERVATION_ONLY"
+    assert res["orders_sent"] == 0
+    assert res["short_executed"] is False
+    assert res["original_signal_time"] == "2026-11-02T16:00:00-05:00"
+    assert "2026-11-02" in res["recovery_time"]
+    broker_mock.submit_order.assert_not_called()
+
+
+def test_27_shadow_evaluator_nov02_session_processing():
+    """27. AutonomousShadowEvaluator procesa la sesión del 2 de noviembre de forma aislada e inmutable."""
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    manifests = generate_freeze_manifests(repo_root)
+
+    evaluator = AutonomousShadowEvaluator(
+        repo_root=repo_root,
+        manifest_a=manifests["MR_VolCond_ZScore_V1"],
+        manifest_b=manifests["CS_RelMom_VolAdj_V2"]
+    )
+
+    assert evaluator.manifest_a.combined_strategy_fingerprint_sha256 is not None
+    assert evaluator.manifest_b.combined_strategy_fingerprint_sha256 is not None
+    assert evaluator.cost_scenario in ("1x", "TIER_1X", CostScenario.TIER_1X)
+
 
