@@ -41,12 +41,22 @@ class PaperBroker(BrokerInterface):
     def get_positions(self) -> List[Position]:
         return list(self.positions.values())
 
+    def get_orders(self) -> List[Dict[str, Any]]:
+        """Devuelve la lista de órdenes registradas en memoria."""
+        return [o.model_dump() if hasattr(o, "model_dump") else dict(o) for o in self.orders.values()]
+
     def submit_order(self, order: PaperOrder, mode: TradingMode = None) -> PaperOrder:
         """
         Envía una orden al simulador.
         REGLA DE SEGURIDAD CRÍTICA (Instrucción 14):
         En ANALYSIS_ONLY es técnicamente imposible ejecutar órdenes.
         """
+        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN (Modo CONTROLLED_RECOVERY)
+        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True):
+            rejected_order = order.model_copy(update={"status": OrderStatus.REJECTED})
+            self.orders[order.order_id] = rejected_order
+            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
+
         active_mode = mode or settings.TRADING_MODE
 
         if active_mode == TradingMode.ANALYSIS_ONLY:
@@ -78,14 +88,6 @@ class PaperBroker(BrokerInterface):
         commission = round(order.quantity * self.commission_per_share, 2)
         total_cost = (order.quantity * fill_price) + commission
 
-        if order.side == OrderSide.BUY and total_cost > self.cash:
-            rejected_order = order.model_copy(update={
-                "status": OrderStatus.REJECTED
-            })
-            self.orders[order.order_id] = rejected_order
-            raise ValueError(f"FONDOS INSUFICIENTES: Costo ${total_cost:,.2f} supera efectivo disponible ${self.cash:,.2f}")
-
-        # Ejecución y Actualización de Cartera
         now = datetime.utcnow()
         filled_order = order.model_copy(update={
             "status": OrderStatus.FILLED,
@@ -94,6 +96,7 @@ class PaperBroker(BrokerInterface):
             "commission": commission,
             "slippage": slippage_cost
         })
+
         self.orders[order.order_id] = filled_order
 
         if order.side == OrderSide.BUY:
