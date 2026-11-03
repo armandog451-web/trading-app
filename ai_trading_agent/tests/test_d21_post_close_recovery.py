@@ -494,3 +494,40 @@ def test_27_shadow_evaluator_nov02_session_processing():
     assert evaluator.cost_scenario in ("1x", "TIER_1X", CostScenario.TIER_1X)
 
 
+def test_28_effective_execution_route_barrier_blocks_paper_orders():
+    """28. Verifica que la barrera física en UnifiedBrokerManager y MoomooBrokerAdapter bloquee cualquier envío."""
+    from ai_trading_agent.execution.brokers.unified_manager import unified_broker
+    from ai_trading_agent.execution.brokers.moomoo_adapter import moomoo_adapter
+
+    order = PaperOrder(
+        order_id="TEST-BARRIER-001",
+        decision_id="DEC-BARRIER-001",
+        symbol="SPY",
+        side=OrderSide.BUY,
+        order_type=OrderType.MARKET,
+        quantity=10,
+        requested_price=500.0,
+        status=OrderStatus.PENDING,
+        created_at=datetime.utcnow()
+    )
+
+    with pytest.raises(PermissionError) as exc_mgr:
+        unified_broker.submit_order(order)
+    assert "EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL" in str(exc_mgr.value)
+
+    with pytest.raises(PermissionError) as exc_moo:
+        moomoo_adapter.submit_order(order)
+    assert "EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL" in str(exc_moo.value)
+
+
+def test_29_rollback_safety_and_backup_integrity():
+    """29. Verifica que los respaldos de los archivos modificados existan y sean válidos."""
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    backup_dir = repo_root / "ai_trading_agent" / "scratch" / "backups_pre_d21_deploy_20261103"
+    assert backup_dir.exists()
+    for fname in ["base.py", "moomoo_adapter.py", "alpaca_adapter.py", "unified_manager.py", "paper_broker.py", "scheduler_service.py"]:
+        bf = backup_dir / fname
+        assert bf.exists(), f"Missing backup for {fname}"
+        assert bf.stat().st_size > 0
+
+
