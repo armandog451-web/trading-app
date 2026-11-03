@@ -28,6 +28,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
         self._sim_cash = 100000.0
         self._sim_equity = 100000.0
         self._sim_positions = []
+        self._sim_orders = []
 
     @property
     def name(self) -> str:
@@ -102,8 +103,41 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
 
         return self._sim_positions
 
+    def get_orders(self) -> List[Dict[str, Any]]:
+        """Consulta órdenes en Alpaca Paper Trading REST API."""
+        if not self.has_credentials:
+            return self._sim_orders
+
+        try:
+            url = f"{self.base_url}/v2/orders?status=all&limit=500"
+            with httpx.Client(timeout=6.0) as client:
+                resp = client.get(url, headers=self._headers())
+                if resp.status_code != 200:
+                    raise RuntimeError(f"Error consultando Alpaca orders: status={resp.status_code}")
+                data = resp.json()
+                return [{
+                    "order_id": str(o.get("id")),
+                    "symbol": o.get("symbol"),
+                    "side": o.get("side", "").upper(),
+                    "quantity": int(float(o.get("qty", 0))),
+                    "dealt_quantity": int(float(o.get("filled_qty", 0))),
+                    "price": float(o.get("limit_price") or o.get("filled_avg_price") or 0.0),
+                    "status": o.get("status", "").upper(),
+                    "created_at": o.get("created_at"),
+                    "updated_at": o.get("updated_at"),
+                    "account_id": self.api_key
+                } for o in data]
+        except Exception as e:
+            logger.error(f"Fallo en Alpaca get_orders: {e}")
+            raise
+
     def submit_order(self, order: PaperOrder) -> PaperOrder:
         """Envía una orden al entorno Paper de Alpaca."""
+        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN (Modo CONTROLLED_RECOVERY)
+        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True):
+            logger.critical("EJECUCIÓN PAPER BLOQUEADA: Barrera institucional activa en AlpacaBrokerAdapter.submit_order()")
+            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
+
         if self.has_credentials:
             try:
                 url = f"{self.base_url}/v2/orders"

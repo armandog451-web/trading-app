@@ -31,3 +31,8 @@ class BaseBrokerAdapter(ABC):
     def submit_order(self, order: PaperOrder) -> PaperOrder:
         """Envía una orden al entorno Paper del broker."""
         pass
+
+    @abstractmethod
+    def get_orders(self) -> List[Dict[str, Any]]:
+        """Recupera la lista de órdenes recientes o activas con estado detallado."""
+        pass

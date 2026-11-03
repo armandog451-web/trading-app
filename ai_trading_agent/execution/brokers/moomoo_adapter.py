@@ -132,8 +132,71 @@ class MoomooBrokerAdapter(BaseBrokerAdapter):
 
         return self._sim_positions
 
+    def get_orders(self) -> List[Dict[str, Any]]:
+        """
+        Consulta órdenes en Moomoo OpenD (SIMULATE).
+        REGLA OBLIGATORIA (FAIL_CLOSED): Si no puede verificarse la conexión o falla el Gateway,
+        DEBE lanzar excepción y NUNCA devolver una lista vacía para evitar órdenes duplicadas.
+        """
+        if not self.is_connected():
+            raise ConnectionError(
+                f"Moomoo OpenD no está escuchando en {self.host}:{self.port}. "
+                f"Bloqueando consulta de órdenes para prevenir falsos vacíos."
+            )
+
+        try:
+            import moomoo as ft
+            trd_ctx = ft.OpenSecTradeContext(
+                filter_trdmarket=ft.TrdMarket.US,
+                host=self.host,
+                port=self.port
+            )
+            ret, orders_df = trd_ctx.order_list_query(
+                trd_env=ft.TrdEnv.SIMULATE,
+                acc_id=self.acc_id,
+                refresh_cache=True
+            )
+            trd_ctx.close()
+            if ret != 0:
+                raise RuntimeError(f"Error consultando order_list_query en Moomoo: ret={ret}")
+
+            results = []
+            if not orders_df.empty:
+                status_map = {
+                    "FILLED_ALL": "FILLED",
+                    "FILLED_PART": "PARTIALLY_FILLED",
+                    "SUBMITTED": "SUBMITTED",
+                    "WAITING_SUBMIT": "SUBMITTED",
+                    "CANCELLED_ALL": "CANCELLED",
+                    "CANCELLED_PART": "CANCELLED",
+                    "FAILED": "REJECTED",
+                    "SUBMIT_FAILED": "REJECTED"
+                }
+                for _, row in orders_df.iterrows():
+                    results.append({
+                        "order_id": str(row.get("order_id")),
+                        "symbol": str(row.get("code", "")).replace("US.", ""),
+                        "side": "BUY" if str(row.get("trd_side")) in ("BUY", "1") else "SELL",
+                        "quantity": int(row.get("qty", 0)),
+                        "dealt_quantity": int(row.get("dealt_qty", 0)),
+                        "price": float(row.get("price", 0.0)),
+                        "status": status_map.get(str(row.get("order_status")), "UNKNOWN"),
+                        "created_at": str(row.get("create_time", "")),
+                        "updated_at": str(row.get("updated_time", "")),
+                        "account_id": self.acc_id
+                    })
+            return results
+        except Exception as e:
+            logger.error(f"Fallo en Moomoo get_orders: {e}")
+            raise
+
     def submit_order(self, order: PaperOrder) -> PaperOrder:
         """Simula o ejecuta orden en Paper Trading de Moomoo."""
+        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN (Modo CONTROLLED_RECOVERY)
+        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True):
+            logger.critical("EJECUCIÓN PAPER BLOQUEADA: Barrera institucional activa en MoomooBrokerAdapter.submit_order()")
+            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
+
         if self.is_connected():
             try:
                 import moomoo as ft
