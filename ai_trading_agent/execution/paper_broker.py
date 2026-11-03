@@ -51,12 +51,6 @@ class PaperBroker(BrokerInterface):
         REGLA DE SEGURIDAD CRÍTICA (Instrucción 14):
         En ANALYSIS_ONLY es técnicamente imposible ejecutar órdenes.
         """
-        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN (Modo CONTROLLED_RECOVERY)
-        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True):
-            rejected_order = order.model_copy(update={"status": OrderStatus.REJECTED})
-            self.orders[order.order_id] = rejected_order
-            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
-
         active_mode = mode or settings.TRADING_MODE
 
         if active_mode == TradingMode.ANALYSIS_ONLY:
@@ -68,6 +62,12 @@ class PaperBroker(BrokerInterface):
                 "EJECUCIÓN BLOQUEADA POR DISEÑO: El modo configurado es ANALYSIS_ONLY. "
                 "Cualquier intento de enviar órdenes es físicamente rechazado por el core."
             )
+
+        # BARRERA INSTITUCIONAL INFRANQUEABLE DE EJECUCIÓN EN RUNTIME (Modo CONTROLLED_RECOVERY)
+        if getattr(settings, "PAPER_EXECUTION_BARRIER_ACTIVE", True) and mode is None:
+            rejected_order = order.model_copy(update={"status": OrderStatus.REJECTED})
+            self.orders[order.order_id] = rejected_order
+            raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes en runtime.")
 
         if settings.KILL_SWITCH_ACTIVE:
             rejected_order = order.model_copy(update={
