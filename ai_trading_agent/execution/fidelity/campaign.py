@@ -38,6 +38,8 @@ class PaperValidationCampaignTracker:
         self.required_verified_days = REQUIRED_VERIFIED_OBSERVATION_DAYS
         self.required_closed_trades = REQUIRED_CLOSED_PAPER_TRADES
         self.paper_validation_active = True
+        self.last_d21_read_status = "UNINITIALIZED"
+        self.last_d21_error_details = None
 
     def calculate_metrics(self, current_date: Optional[date] = None) -> Dict[str, Any]:
         """Calcula los contadores de calendario y observación verificada."""
