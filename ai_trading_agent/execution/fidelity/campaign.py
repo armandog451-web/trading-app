@@ -80,6 +80,12 @@ class PaperValidationCampaignTracker:
         d21_valid_evaluation_sessions = self._get_d21_valid_evaluations_count()
         paper_closed_trades = closed_trades
 
+        # Distinguir disponibilidad de telemetría vs madurez de campaña
+        if self.last_d21_read_status != "OK":
+            evidence_availability = "EVIDENCE_UNAVAILABLE"
+        else:
+            evidence_availability = "EVIDENCE_AVAILABLE"
+
         # 5. Estado de cumplimiento
         meets_days = verified_days >= self.required_verified_days
         meets_trades = closed_trades >= self.required_closed_trades
@@ -108,7 +114,10 @@ class PaperValidationCampaignTracker:
                 "market_sessions_completed": market_sessions_completed,
                 "d21_valid_evaluation_sessions": d21_valid_evaluation_sessions,
                 "paper_closed_trades": paper_closed_trades,
+                "d21_evaluation_read_status": self.last_d21_read_status,
             },
+            "d21_evaluation_read_status": self.last_d21_read_status,
+            "evidence_availability": evidence_availability,
             "calendar_days_active": calendar_days_active,
             "market_sessions_completed": market_sessions_completed,
             "d21_valid_evaluation_sessions": d21_valid_evaluation_sessions,
@@ -120,24 +129,141 @@ class PaperValidationCampaignTracker:
         }
 
     def _get_d21_valid_evaluations_count(self) -> int:
-        """Cuenta las sesiones de evaluación formal de D21 registradas en la persistencia."""
+        """
+        Cuenta exclusivamente evaluaciones ordinarias en tiempo real con evidencia científica completa.
+        Garantiza:
+        1. Resolución de BD absoluta vía configuración canónica (settings.DATABASE_URL).
+        2. Tarea canónica exact: daily_post_close_{date_str} con status = 'SUCCESS'.
+        3. Fecha de mercado válida y fuera de la brecha [2026-10-06, 2026-10-20].
+        4. Cobertura efectiva obligatoria de SPY, QQQ, IWM y DIA en evaluated_symbols.
+        5. Resultados individuales válidos (NO_TRADE, BUY, SELL) sin errores.
+        6. Telemetría obligatoria con d21_last_evaluated_bar == date_str y status == SUCCESS.
+        7. Validación temporal completa:
+           - Timestamp con zona horaria inequívoca (offset o 'Z').
+           - Ejecutado en el mismo día bursátil (exec_dt_et.date() == d_obj).
+           - Estrictamente posterior al cierre bursátil oficial aplicable (exec_dt_et > close_dt_et).
+        8. Deduplicación por fecha de sesión.
+        9. Distinción explícita de estados de persistencia: OK, DB_NOT_FOUND, TABLE_NOT_FOUND, READ_ERROR.
+        """
         try:
-            conn = get_connection()
-            c = conn.cursor()
-            c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='task_executions'")
-            if c.fetchone():
-                c.execute(
-                    "SELECT count(DISTINCT execution_date) FROM task_executions "
-                    "WHERE task_id LIKE 'daily_post_close_%' AND status='SUCCESS'"
-                )
-                row = c.fetchone()
-                count = row[0] if row else 0
+            from pathlib import Path
+            import sqlite3
+            import json
+            import pytz
+            from datetime import time
+            from ai_trading_agent.config.settings import settings
+            from ai_trading_agent.schedule.market_calendar import market_calendar
+
+            # 1. Resolución canónica absoluta
+            repo_root = Path(__file__).resolve().parent.parent.parent.parent
+            db_rel = settings.DATABASE_URL.replace("sqlite:///", "")
+            db_path = (repo_root / db_rel).resolve()
+
+            if not db_path.exists():
+                self.last_d21_read_status = "DB_NOT_FOUND"
+                self.last_d21_error_details = f"File not found: {db_path}"
+                return 0
+
+            conn = sqlite3.connect(str(db_path), timeout=5.0)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='task_logs_audit'")
+            if not cursor.fetchone():
+                self.last_d21_read_status = "TABLE_NOT_FOUND"
+                self.last_d21_error_details = "Table task_logs_audit missing"
                 conn.close()
-                return count
+                return 0
+
+            query = """
+            SELECT id, task_id, date_str, timestamp, status, payload_json
+            FROM task_logs_audit
+            WHERE task_id LIKE 'daily_post_close_%' AND status = 'SUCCESS'
+            ORDER BY id ASC
+            """
+            rows = cursor.execute(query).fetchall()
             conn.close()
-        except Exception:
-            pass
-        return 0
+
+            tz = pytz.timezone("America/New_York")
+            required_symbols = {"SPY", "QQQ", "IWM", "DIA"}
+            valid_decisions = {"NO_TRADE", "BUY", "SELL"}
+            valid_dates = set()
+
+            for row_id, task_id, date_str, ts_str, status, payload_raw in rows:
+                try:
+                    d_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    continue
+
+                if self.gap_start <= d_obj <= self.gap_end:
+                    continue
+
+                expected_task_id = f"daily_post_close_{date_str}"
+                if task_id != expected_task_id:
+                    continue
+
+                try:
+                    payload = json.loads(payload_raw) if payload_raw else {}
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+                d21_eval = payload.get("d21_evaluation")
+                if not isinstance(d21_eval, dict):
+                    continue
+
+                eval_symbols = d21_eval.get("evaluated_symbols")
+                if not isinstance(eval_symbols, dict) or not required_symbols.issubset(set(eval_symbols.keys())):
+                    continue
+
+                if any(eval_symbols.get(s) not in valid_decisions for s in required_symbols):
+                    continue
+
+                telemetry = d21_eval.get("telemetry")
+                if not isinstance(telemetry, dict) or not telemetry:
+                    continue
+
+                last_bar = telemetry.get("d21_last_evaluated_bar")
+                if not last_bar or last_bar != date_str:
+                    continue
+
+                if telemetry.get("d21_last_evaluation_status") != "SUCCESS":
+                    continue
+
+                # Validación temporal completa con zona horaria inequívoca
+                exec_ts_str = payload.get("timestamp") or ts_str
+                if not exec_ts_str or not isinstance(exec_ts_str, str):
+                    continue
+
+                try:
+                    ts_clean = exec_ts_str.replace("Z", "+00:00")
+                    dt_parsed = datetime.fromisoformat(ts_clean)
+                    if dt_parsed.tzinfo is None:
+                        continue
+                    exec_dt_et = dt_parsed.astimezone(tz)
+                except Exception:
+                    continue
+
+                # Evaluación ordinaria debe ejecutarse el mismo día de mercado
+                if exec_dt_et.date() != d_obj:
+                    continue
+
+                # Horario oficial de cierre aplicable
+                dt_noon = tz.localize(datetime.combine(d_obj, time(12, 0)))
+                is_early, _ = market_calendar.is_early_close(dt_noon)
+                applicable_close_time = time(13, 0) if is_early else time(16, 0)
+                official_close_dt = tz.localize(datetime.combine(d_obj, applicable_close_time))
+
+                # Causalidad estricta: posterior al cierre bursátil
+                if exec_dt_et <= official_close_dt:
+                    continue
+
+                valid_dates.add(date_str)
+
+            self.last_d21_read_status = "OK"
+            self.last_d21_error_details = None
+            return len(valid_dates)
+        except Exception as e:
+            self.last_d21_read_status = "READ_ERROR"
+            self.last_d21_error_details = str(e)
+            return 0
 
     def _get_closed_paper_trades_count(self) -> int:
         """Cuenta los trades cerrados persistidos en la base de datos sin fabricar historial."""
