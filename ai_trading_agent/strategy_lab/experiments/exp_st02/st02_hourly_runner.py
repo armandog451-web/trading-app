@@ -188,14 +188,20 @@ class St02HourlyRunner:
         else:
             bar_ts = bar_ts.astimezone(timezone.utc)
 
-        # El cierre de la barra ocurre al final de su intervalo
-        # Para barras H1 regulares: timestamp corresponde a la apertura del intervalo o cierre?
-        # ConvenciA3n estAndar: bar.timestamp es la apertura. Intervalo = 60 min (o 30 min para barra 7).
-        bar_close_utc = bar_ts + timedelta(minutes=60)
-        # Ajuste para barra 7 (15:30-16:00 EST): intervalo es de 30 minutos
+        # El cierre de la barra ocurre al final de su intervalo segun el calendario bursatil oficial
         bar_et = bar_ts.astimezone(NY_TZ)
-        if bar_et.time() == time(15, 30):
+        from ai_trading_agent.schedule.market_calendar import market_calendar
+        is_early, _ = market_calendar.is_early_close(bar_et)
+
+        if is_early and bar_et.time() == time(12, 30):
+            # En cierre anticipado a las 13:00, la barra 12:30-13:00 es de 30 minutos
             bar_close_utc = bar_ts + timedelta(minutes=30)
+        elif not is_early and bar_et.time() == time(15, 30):
+            # En jornada regular, la barra 15:30-16:00 es de 30 minutos
+            bar_close_utc = bar_ts + timedelta(minutes=30)
+        else:
+            # Barras regulares (incluyendo 12:30-13:30 en jornada normal): 60 minutos
+            bar_close_utc = bar_ts + timedelta(minutes=60)
 
         # Causal latency check: no se puede evaluar antes de que la barra haya cerrado en el mundo real
         if now_utc < bar_close_utc:
