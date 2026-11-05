@@ -444,8 +444,20 @@ class St02AutonomousService:
                         cycle_id = f"{today}_C{spec['cycle_num']}"
                         if self.telemetry.get("last_cycle_evaluated") != cycle_id:
                             self.logger.info(f"Disparando evaluación causal de ciclo {spec['cycle_num']} ({cycle_id})...")
-                            # En ejecución real, aquí se invocan los datos reales GLD/DIA
-                            # y se ejecuta execute_cycle(...)
+                            try:
+                                bars_by_symbol = {}
+                                for sym in ['GLD', 'DIA']:
+                                    bars = self.data_provider.get_historical_bars(symbol=sym, count=250, interval='60m')
+                                    bars_by_symbol[sym] = bars
+                                res = self.execute_cycle(
+                                    cycle_spec=spec,
+                                    session_date=today,
+                                    current_time_et=now_et,
+                                    bars_by_symbol=bars_by_symbol
+                            )
+                                self.logger.info(f"Ciclo {spec['cycle_num']} evaluado: status={res.get('status')}")
+                            except Exception as ex:
+                                self.logger.error(f"Error evaluando ciclo {spec['cycle_num']}: {ex}")
                             self.telemetry["last_cycle_evaluated"] = cycle_id
 
                 time.sleep(poll_interval_sec)
