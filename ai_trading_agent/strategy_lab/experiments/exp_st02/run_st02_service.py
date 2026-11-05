@@ -46,6 +46,9 @@ from ai_trading_agent.strategy_lab.experiments.exp_st02.shadow_ledger import (
 from ai_trading_agent.strategy_lab.experiments.exp_st02.shadow_models import (
     ShadowEventTypeST02,
 )
+from ai_trading_agent.strategy_lab.experiments.exp_st02.st02_telegram_notifier import (
+    St02TelegramNotifier,
+)
 
 NY_TZ = zoneinfo.ZoneInfo("America/New_York")
 
@@ -86,6 +89,7 @@ class St02AutonomousService:
         # En EXP-ST02 las barras sintéticas están estrictamente prohibidas
         self.data_provider = data_provider or YFinanceMarketDataProvider(fallback_to_synthetic=False)
         self.runner: Optional[St02HourlyRunner] = None
+        self.telegram_notifier = St02TelegramNotifier(exp_dir=self.exp_st02_dir)
         self.is_running = False
 
         # Configurar logging
@@ -411,6 +415,7 @@ class St02AutonomousService:
         """Bucle principal de ejecución autónoma."""
         if not self.acquire_lock():
             sys.exit(1)
+        self.stop_file.unlink(missing_ok=True)
 
         valid_crypto, diag = self.verify_startup_integrity()
         if not valid_crypto:
@@ -456,6 +461,21 @@ class St02AutonomousService:
                                     bars_by_symbol=bars_by_symbol
                             )
                                 self.logger.info(f"Ciclo {spec['cycle_num']} evaluado: status={res.get('status')}")
+                                try:
+                                    if self.telegram_notifier.is_configured:
+                                        self.telegram_notifier.notify_cycle_result(
+                                            cycle_spec=spec,
+                                            cycle_result=res,
+                                            bars_by_symbol=bars_by_symbol,
+                                        )
+                                        if res.get("status") in ("DATA_FEED_ERROR", "LATE_START_SKIPPED"):
+                                            self.telegram_notifier.notify_critical_alert(
+                                                alert_type=res.get("status"),
+                                                details=f"Ciclo {spec['cycle_num']} finalizado con estado {res.get('status')}.",
+                                                cycle_num=spec["cycle_num"],
+                                            )
+                                except Exception as tg_ex:
+                                    self.logger.warning(f"Error enviando notificacion Telegram de ciclo: {tg_ex}")
                             except Exception as ex:
                                 self.logger.error(f"Error evaluando ciclo {spec['cycle_num']}: {ex}")
                             self.telemetry["last_cycle_evaluated"] = cycle_id
@@ -493,6 +513,14 @@ def main():
     if args.stop:
         service.stop_file.parent.mkdir(parents=True, exist_ok=True)
         service.stop_file.write_text(f"STOP_REQUESTED_AT_{int(time.time())}", encoding="utf-8")
+        try:
+            if service.telegram_notifier.is_configured:
+                service.telegram_notifier.notify_critical_alert(
+                    alert_type="KILL_SWITCH_ACTIVATED",
+                    details="Orden de parada limpia (Kill-Switch) emitida via CLI.",
+                )
+        except Exception:
+            pass
         print("Orden de parada (Kill-Switch) registrada en stopfile.")
         sys.exit(0)
 
