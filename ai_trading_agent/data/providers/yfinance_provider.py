@@ -8,7 +8,7 @@ y ofrece fallback limpio al proveedor sintético.
 """
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import yfinance as yf
 
@@ -65,7 +65,7 @@ class YFinanceMarketDataProvider(BaseMarketDataProvider):
                 # Timestamp normalizado
                 ts = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else datetime.utcnow()
                 if hasattr(ts, "tzinfo") and ts.tzinfo is not None:
-                    ts = ts.replace(tzinfo=None)  # UTC naive para consistencia interna
+                    ts = ts.astimezone(timezone.utc).replace(tzinfo=None)  # UTC naive para consistencia interna
 
                 bar = OHLCVBar(
                     timestamp=ts,
