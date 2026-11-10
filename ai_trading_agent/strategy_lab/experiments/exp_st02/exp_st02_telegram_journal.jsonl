@@ -1,3 +1,5 @@
 {"dedup_key": "CYCLE_REPORT_2026-11-05_C3", "event_type": "CYCLE_REPORT", "timestamp_utc": "2026-11-05T17:36:17.184331+00:00", "status": "DELIVERED", "message_id": 3702, "details": ""}
 {"dedup_key": "CRITICAL_ALERT_DATA_FEED_ERROR_2026-11-05_3", "event_type": "CRITICAL_ALERT", "timestamp_utc": "2026-11-05T17:36:17.728201+00:00", "status": "DELIVERED", "message_id": 3703, "details": ""}
 {"dedup_key": "CRITICAL_ALERT_KILL_SWITCH_ACTIVATED_2026-11-05_GLOBAL", "event_type": "CRITICAL_ALERT", "timestamp_utc": "2026-11-05T17:37:31.005713+00:00", "status": "DELIVERED", "message_id": 3704, "details": ""}
+{"dedup_key": "CYCLE_REPORT_2026-11-10_C2", "event_type": "CYCLE_REPORT", "timestamp_utc": "2026-11-10T16:45:56.766550+00:00", "status": "DELIVERED", "message_id": 3739, "details": ""}
+{"dedup_key": "CRITICAL_ALERT_KILL_SWITCH_ACTIVATED_2026-11-10_GLOBAL", "event_type": "CRITICAL_ALERT", "timestamp_utc": "2026-11-10T16:46:45.725915+00:00", "status": "DELIVERED", "message_id": 3740, "details": ""}

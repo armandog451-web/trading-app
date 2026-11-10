@@ -32,6 +32,9 @@ repo_root = Path(__file__).resolve().parent.parent.parent.parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
+from dotenv import load_dotenv
+load_dotenv(repo_root / ".env")
+
 from ai_trading_agent.domain.models import OHLCVBar
 from ai_trading_agent.data.providers.yfinance_provider import YFinanceMarketDataProvider
 from ai_trading_agent.schedule.market_calendar import MarketCalendarService
