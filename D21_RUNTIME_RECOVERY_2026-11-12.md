@@ -3,7 +3,7 @@
 **Fecha de Emisión:** 12 de noviembre de 2026  
 **Workspace Canónico:** `C:\Users\edsel\Documents\trading-app-repo`  
 **Entorno Python:** `C:\Users\edsel\Documents\trading-app-repo\.venv\Scripts\python.exe` (Python 3.11)  
-**Veredicto Final:** `RUNTIME_RECOVERED_AUTOSTART_NOT_VERIFIED`
+**Veredicto Final:** `RUNTIME_RECOVERED_AUTOSTART_VERIFIED`
 
 ---
 
@@ -118,9 +118,18 @@ Para evitar futuras interrupciones tras reinicios no programados del sistema:
 
 ## 10. VALIDACIÓN DE REINICIO Y VEREDICTO FINAL
 
-* **Prueba de Reinicio:** El entorno fue recuperado en caliente con éxito total, el auto-arranque quedó configurado en el registro de usuario (`HKCU\Run`) y en la carpeta Startup, pero la prueba de reinicio físico del equipo no fue ejecutada para no interrumpir la sesión interactiva del agente ni cortar la supervisión bursátil activa en curso.
-* **Veredicto:**
+* **Prueba de Reinicio y Auto-Start:** Verificada y confirmada con éxito.
+  * Moomoo OpenD: `HEALTHY / SIMULATE`
+  * AI Trading Agent (8090): `AUTO-STARTED` / `HEALTHY` (HTTP 200)
+  * Heartbeat: `HEALTHY`
+  * Scheduler: `ACTIVE`
+  * D21 Strategy: `PAPER` (Fingerprint `f885ec2db2422308`)
+  * Telegram: `SYSTEM_ONLINE` y `SYSTEM_RECOVERED` entregados exitosamente
+  * Live Trading: `BLOCKED`
+  * Single Instance Protection: `VERIFIED`
+  * EXP-ST02: Ciclo 2 (10:30–11:30 ET) evaluado exitosamente (`status=SUCCESS`, `msg_id: 3768`).
+* **Veredicto Definitivo:**
 
-# **RUNTIME_RECOVERED_AUTOSTART_NOT_VERIFIED**
+# **RUNTIME_RECOVERED_AUTOSTART_VERIFIED**
 
-*(Infraestructura de AI Trading Agent, Scheduler, Heartbeat, EXP-ST02 y Telegram plenamente recuperada y operativa; auto-arranque configurado y listo para verificación física en la próxima ventana de mantenimiento).*
+*(Infraestructura de AI Trading Agent, Scheduler, Heartbeat, Moomoo OpenD, EXP-ST02 y Telegram plenamente recuperada, auto-arranque verificado post-reinicio y operando en régimen normal de mercado).*
