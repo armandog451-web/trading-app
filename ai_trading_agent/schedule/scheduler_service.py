@@ -633,13 +633,13 @@ class MarketScheduleService:
         """Verifica si la tarea ya fue completada (SUCCESS o FAILED_FINAL) hoy en memoria o en SQLite."""
         if task_id in self._last_executions:
             exec_data = self._last_executions[task_id]
-            if exec_data.get("status") in ("SUCCESS", "FAILED_FINAL") and exec_data.get("date") == date_str:
+            if exec_data.get("status") in ("SUCCESS", "FAILED_FINAL", "MISSED_DUE_TO_HOST_REBOOT") and exec_data.get("date") == date_str:
                 return True
 
         # Consultar repositorio SQLite
         try:
             logs = audit_repo.get_task_logs(task_id=task_id, date_str=date_str)
-            return any(l.get("status") in ("SUCCESS", "FAILED_FINAL") for l in logs)
+            return any(l.get("status") in ("SUCCESS", "FAILED_FINAL", "MISSED_DUE_TO_HOST_REBOOT") for l in logs)
         except Exception:
             return False
 
