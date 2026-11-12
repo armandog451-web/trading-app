@@ -20,4 +20,4 @@ if __name__ == "__main__":
     print(" Modo: ANALYSIS_ONLY (100% auditable y determinista)")
     print(" Panel: http://localhost:8090")
     print("=" * 70)
-    uvicorn.run("ai_trading_agent.api.app:app", host="127.0.0.1", port=8090, log_level="info", reload=True)
+    uvicorn.run("ai_trading_agent.api.app:app", host="127.0.0.1", port=8090, log_level="info", reload=False)
