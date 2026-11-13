@@ -40,8 +40,8 @@ class TradingAgentJudge:
     # Nota de arquitectura: según las directrices actuales del SDK google-genai,
     # gemini-2.5-flash y gemini-2.5-pro están deprecados y han sido sustituidos por
     # gemini-3.8-flash (modelo rápido de triaje) y gemini-4-argon (modelo profundo de razonamiento).
-    FAST_GEMINI_MODEL = "gemini-2.5-flash"
-    DEEP_GEMINI_MODEL = "gemini-2.5-pro"
+    FAST_GEMINI_MODEL = "gemini-3.8-flash"
+    DEEP_GEMINI_MODEL = "gemini-4-argon"
 
     def __init__(
         self,
