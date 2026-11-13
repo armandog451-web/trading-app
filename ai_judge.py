@@ -181,9 +181,12 @@ class TradingAgentJudge:
 
             raise RuntimeError(f"Proveedor desconocido: {self.provider}")
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
             future = executor.submit(_invoke)
             raw_output = future.result(timeout=timeout)
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
 
         return self._extract_json(raw_output)
 
