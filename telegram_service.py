@@ -217,6 +217,14 @@ class TelegramService:
                                 elif raw_text in ['/latencia', '/latency', '/ping']:
                                     result = latency_guardian.check_and_optimize()
                                     await latency_guardian._send_latency_alert(result)
+                                elif raw_text in ['/auditoria_ia', '/auditoria']:
+                                    from shadow_logger import ShadowLogger
+                                    shadow = ShadowLogger()
+                                    report_text = await asyncio.to_thread(shadow.generate_daily_audit_report)
+                                    await client.post(
+                                        f'https://api.telegram.org/bot{self.bot_token}/sendMessage',
+                                        json={'chat_id': chat, 'text': report_text, 'parse_mode': 'Markdown'}
+                                    )
                                 elif raw_text in ['/findesemana', '/weekend', '/backtest', '/optimizar', '/planlunes']:
                                     await client.post(
                                         f'https://api.telegram.org/bot{self.bot_token}/sendMessage',
@@ -233,6 +241,7 @@ class TelegramService:
                                         '🤖 *Bienvenido a AlgortimTrading Robot v2.0*\n\n'
                                         'Estoy conectado a tu Dashboard de Trading.\n'
                                         '• Usa `/saldo` o `/balance` para ver tu capital y posiciones.\n'
+                                        '• Usa `/auditoria_ia` para ver el balance en modo espejo del Agente IA.\n'
                                         '• Usa `/findesemana` o `/backtest` para recalibrar el bot y ver el plan del lunes.\n'
                                         '• Usa `/latencia` o `/ping` para medir latencia de red.\n'
                                         '• Te enviaré aquí cada oportunidad cuantitativa para aprobarla con 1 clic.'

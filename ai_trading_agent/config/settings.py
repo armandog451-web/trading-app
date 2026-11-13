@@ -36,7 +36,7 @@ class AgentSettings(BaseSettings):
     MAX_AGGREGATE_OPEN_RISK_PCT: float = 1.50  # 1.50% de riesgo abierto agregado ($15,000 USD cap)
     MAX_AGGREGATE_OPEN_RISK: float = 15000.0
     MAX_DAILY_LOSS_PCT: float = 1.00           # Freno de emergencia diario 1.00% ($10,000 USD cap)
-    MAX_DAILY_LOSS: float = 10000.0
+    MAX_DAILY_LOSS: float = 250.0
     MAX_CONSECUTIVE_LOSSES: int = 3            # Pausar estrategia tras 3 pérdidas consecutivas
     DRAWDOWN_WARNING_PCT: float = 5.0          # Alerta y reducción de riesgo al 5.0%
     DRAWDOWN_HALT_PCT: float = 10.0            # Detención total y autorización al 10.0%

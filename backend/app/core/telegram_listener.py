@@ -150,6 +150,23 @@ class TelegramListener:
             except Exception as e:
                 logger.error(f"Error respondiendo comando balance en Telegram: {e}")
 
+        elif text in ("/auditoria_ia", "/auditoria"):
+            try:
+                import sys
+                from pathlib import Path
+                root_path = Path(__file__).resolve().parent.parent.parent.parent
+                if str(root_path) not in sys.path:
+                    sys.path.insert(0, str(root_path))
+                from shadow_logger import ShadowLogger
+                shadow = ShadowLogger()
+                report_text = await asyncio.to_thread(shadow.generate_daily_audit_report)
+                await client.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={"chat_id": chat_id, "text": report_text, "parse_mode": "Markdown"}
+                )
+            except Exception as e:
+                logger.error(f"Error generando /auditoria_ia en Telegram: {e}")
+
         elif text in ("/findesemana", "/weekend", "/backtest", "/optimizar", "/planlunes"):
             try:
                 await client.post(
@@ -175,6 +192,7 @@ class TelegramListener:
             help_msg = (
                 "🤖 *TradePulse Quantitative Engine v2.0*\n\n"
                 "• `/balance` o `/saldo` : Consulta de saldo y posiciones en tiempo real.\n"
+                "• `/auditoria_ia` : Balance diario y PnL espejo de operaciones frenadas por la IA.\n"
                 "• `/findesemana` o `/backtest` : Ejecuta la optimización y recalibración ML de fin de semana.\n"
                 "• Alertas interactivas con botones `[✅ Ejecutar]` y `[❌ Descartar]` para aprobación en 1 toque."
             )

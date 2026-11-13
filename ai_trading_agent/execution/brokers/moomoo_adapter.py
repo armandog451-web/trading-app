@@ -221,7 +221,7 @@ class MoomooBrokerAdapter(BaseBrokerAdapter):
             }
 
             headlines = NewsCollector().get_recent_headlines(moo_ticker)
-            decision = TradingAgentJudge().evaluate_signal(
+            decision = TradingAgentJudge(max_daily_loss_usd=250.0).evaluate_signal(
                 signal=signal_payload,
                 headlines=headlines,
                 current_daily_pnl=current_daily_pnl,

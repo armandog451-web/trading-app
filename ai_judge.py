@@ -40,8 +40,8 @@ class TradingAgentJudge:
     # Nota de arquitectura: según las directrices actuales del SDK google-genai,
     # gemini-2.5-flash y gemini-2.5-pro están deprecados y han sido sustituidos por
     # gemini-3.8-flash (modelo rápido de triaje) y gemini-4-argon (modelo profundo de razonamiento).
-    FAST_GEMINI_MODEL = "gemini-3.8-flash"
-    DEEP_GEMINI_MODEL = "gemini-4-argon"
+    FAST_GEMINI_MODEL = "gemini-2.5-flash"
+    DEEP_GEMINI_MODEL = "gemini-2.5-pro"
 
     def __init__(
         self,
@@ -52,11 +52,11 @@ class TradingAgentJudge:
         if max_daily_loss_usd is not None:
             self.max_daily_loss_usd = abs(float(max_daily_loss_usd))
         else:
-            env_loss = os.getenv("MAX_DAILY_LOSS", "10000.0")
+            env_loss = os.getenv("MAX_DAILY_LOSS", "250.0")
             try:
                 self.max_daily_loss_usd = abs(float(env_loss))
             except (ValueError, TypeError):
-                self.max_daily_loss_usd = 10000.0
+                self.max_daily_loss_usd = 250.0
 
         self.fast_timeout_seconds = float(fast_timeout_seconds)
         self.deep_timeout_seconds = float(deep_timeout_seconds)

@@ -54,16 +54,18 @@ def run_dry_run_test(send_telegram: bool = False) -> None:
         "take_profit": 512.50,
     }
 
-    judge = TradingAgentJudge(max_daily_loss_usd=500.0)
+    judge = TradingAgentJudge()
+    print(f"[PASO 3] Límite diario configurado: ${judge.max_daily_loss_usd:,.2f} | Modelos: {judge.FAST_GEMINI_MODEL} / {judge.DEEP_GEMINI_MODEL}")
+    assert judge.max_daily_loss_usd == 250.0, f"Se esperaba límite $250.0, se obtuvo {judge.max_daily_loss_usd}"
     logger_shadow = ShadowLogger()
 
     # 2. Escenario A: Filtro 1 (Regla Monetaria Mecánica)
     print("\n" + "-" * 72)
-    print("[PASO 3 - ESCENARIO A] Prueba de Filtro 1 (Límite de pérdida diaria alcanzado)")
+    print("[PASO 3 - ESCENARIO A] Prueba de Filtro 1 (Límite de pérdida diaria $250 alcanzado)")
     decision_risk = judge.evaluate_signal(
         signal=simulated_signal,
         headlines=headlines if headlines else ["QQQ rallies on tech earnings"],
-        current_daily_pnl=-650.0,  # Supera el límite de -$500.00
+        current_daily_pnl=-260.0,  # Supera el límite de -$250.00
     )
     print(f"   -> Resultado Filtro 1: {decision_risk}")
     assert decision_risk["allow_trade"] is False
