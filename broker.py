@@ -139,6 +139,47 @@ class BrokerManager:
 
     def execute_order(self, symbol: str, side: str, qty: int, price: float, stop_loss: float = 0.0, take_profit: float = 0.0):
         """Ejecuta una orden de compra o venta en Moomoo OpenD, Alpaca o simulador."""
+        # =====================================================================
+        # AGENTE INTERCEPTOR DE NOTICIAS Y RIESGO CON IA (Pre-place_order)
+        # =====================================================================
+        try:
+            from news_collector import NewsCollector
+            from ai_judge import TradingAgentJudge
+            from shadow_logger import ShadowLogger
+
+            moo_ticker = f"US.{symbol.replace('US.', '')}"
+            current_daily_pnl = float(self.get_total_unrealized_pnl())
+            signal_payload = {
+                "strategy": "ORACLE_BROKER_MANAGER",
+                "symbol": moo_ticker,
+                "direction": "LONG" if side.upper() == "BUY" else "SHORT",
+                "entry_price": price,
+                "stop_loss": stop_loss if stop_loss else None,
+                "take_profit": take_profit if take_profit else None,
+            }
+            headlines = NewsCollector().get_recent_headlines(moo_ticker)
+            decision = TradingAgentJudge().evaluate_signal(
+                signal=signal_payload,
+                headlines=headlines,
+                current_daily_pnl=current_daily_pnl,
+            )
+            ShadowLogger().log_decision(signal=signal_payload, decision=decision)
+
+            if not decision.get("allow_trade", True):
+                log_event(
+                    "WARNING",
+                    f"🛑 Orden {side} {qty} {moo_ticker} FRENADA por IA [{decision.get('step_triggered')}]: {decision.get('reason')}",
+                )
+                return {
+                    "success": False,
+                    "blocked_by_ai": True,
+                    "step_triggered": decision.get("step_triggered"),
+                    "reason": decision.get("reason"),
+                    "broker": "Moomoo OpenD (AI Interceptor)",
+                }
+        except Exception as interceptor_err:
+            logger.warning(f"Fail-Safe en Agente Interceptor IA ({interceptor_err}); continuando ejecución.")
+
         # 1. MOOMOO OPEND EXECUTION
         if self.active_broker == "moomoo":
             try:

@@ -197,6 +197,49 @@ class MoomooBrokerAdapter(BaseBrokerAdapter):
             logger.critical("EJECUCIÓN PAPER BLOQUEADA: Barrera institucional activa en MoomooBrokerAdapter.submit_order()")
             raise PermissionError("EJECUCIÓN PAPER BLOQUEADA POR BARRERA INSTITUCIONAL: Se prohíbe el envío de órdenes.")
 
+        # =====================================================================
+        # AGENTE INTERCEPTOR DE NOTICIAS Y RIESGO CON IA (Pre-place_order)
+        # =====================================================================
+        try:
+            from news_collector import NewsCollector
+            from ai_judge import TradingAgentJudge
+            from shadow_logger import ShadowLogger
+
+            moo_ticker = f"US.{order.symbol.replace('US.', '')}"
+            acct = self.get_account_summary()
+            realized_pnl = float(acct.get("realized_pnl", 0.0))
+            unrealized_pnl = sum(float(p.unrealized_pnl) for p in self.get_positions())
+            current_daily_pnl = realized_pnl + unrealized_pnl
+
+            signal_payload = {
+                "strategy": order.decision_id or "ORACLE_D21",
+                "symbol": moo_ticker,
+                "direction": "LONG" if order.side.value == "BUY" else "SHORT",
+                "entry_price": order.requested_price,
+                "stop_loss": order.stop_loss,
+                "take_profit": order.take_profit,
+            }
+
+            headlines = NewsCollector().get_recent_headlines(moo_ticker)
+            decision = TradingAgentJudge().evaluate_signal(
+                signal=signal_payload,
+                headlines=headlines,
+                current_daily_pnl=current_daily_pnl,
+            )
+            ShadowLogger().log_decision(signal=signal_payload, decision=decision)
+
+            if not decision.get("allow_trade", True):
+                logger.warning(
+                    f"🛑 Orden en {moo_ticker} FRENADA por Agente Interceptor IA "
+                    f"[{decision.get('step_triggered')}]: {decision.get('reason')}"
+                )
+                return order.model_copy(update={"status": OrderStatus.REJECTED})
+        except Exception as interceptor_err:
+            logger.warning(
+                f"Fail-Safe en Agente Interceptor IA ({interceptor_err}); "
+                "continuando con flujo original de orden."
+            )
+
         if self.is_connected():
             try:
                 import moomoo as ft
