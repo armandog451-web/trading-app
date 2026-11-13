@@ -54,6 +54,8 @@ class NewsCollector:
             cleaned = cleaned.split(".")[-1]
         return cleaned.strip()
 
+    extract_clean_symbol = clean_ticker
+
     def _build_rss_urls(self, clean_symbol: str) -> List[str]:
         """Construye las 3 fuentes RSS requeridas."""
         return [
